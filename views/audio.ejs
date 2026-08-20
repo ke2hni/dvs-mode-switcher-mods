@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <title>2 Way Audio</title>
+    <link rel="stylesheet" href="/css/styles.css">
+    <style>
+        .status-light {
+            display: inline-block;
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            margin-left: 10px;
+        }
+
+        .cos-light {
+            background-color: grey;
+        }
+
+        .ptt-light {
+            background-color: grey;
+        }
+
+        .active {
+            background-color: green;
+        }
+
+        .transmitting {
+            background-color: red;
+        }
+
+        .btn-group-custom {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+
+        .status-indicators {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            margin-top: 20px;
+        }
+
+        .status-indicators span {
+            margin-right: 10px;
+            font-weight: bold;
+        }
+    </style>
+</head>
+<body>
+<%- include('partials/header') %>
+
+<div class="container text-center" id="audio-container">
+    <h2>2 Way Audio</h2>
+    <div class="btn-group btn-group-custom" role="group" aria-label="Audio Controls">
+        <button id="toggleAudio" class="btn btn-success">Start Audio</button>
+    </div>
+    <div class="btn-group btn-group-custom" role="group" aria-label="PTT Controls">
+        <button id="ptt" class="btn btn-primary">Push To Talk</button>
+    </div>
+    <div class="status-indicators">
+        <span>COS:</span> <span class="status-light cos-light" id="cosLight"></span>
+        <span>PTT:</span> <span class="status-light ptt-light" id="pttLight"></span>
+    </div>
+</div>
+
+<script src="/socket.io/socket.io.js"></script>
+<script src="/js/pcm-player.js"></script>
+<script src="/js/MicCapture.js"></script>
+<script src="/js/tone-utils.js"></script>
+<script>
+    const socket = io();
+    let pcmPlayer;
+    let seq = 0;
+    const cosLight = document.getElementById('cosLight');
+    const pttLight = document.getElementById('pttLight');
+    const toggleAudioButton = document.getElementById('toggleAudio');
+    let audioStarted = false;
+
+    toggleAudioButton.addEventListener('click', () => {
+        if (!audioStarted) {
+            if (!pcmPlayer) {
+                pcmPlayer = new PCMPlayer({ encoding: '16bitInt', channels: 1, sampleRate: 8000 });
+
+                socket.on('audio', (data) => {
+                    let validCall = false;
+                    let endOfCall = false;
+
+                    if (!endOfCall && data.byteLength === 32) {
+                        console.log('End of call');
+                        endOfCall = true;
+                    } else if (!endOfCall && data.byteLength === 352){
+                        console.log('Audio data received'); // Should be audio anyway
+                        validCall = true;
+                    }
+
+                    const audioData = data.slice(32); // Just dropping the header for now
+
+                    if (!endOfCall && validCall) {
+                        pcmPlayer.feed(new Uint8Array(audioData));
+                        cosLight.classList.add('active');
+                    }
+
+                    if (endOfCall) {
+                        setTimeout(() => cosLight.classList.remove('active'), 1500);
+                    }
+                });
+
+                toggleAudioButton.textContent = 'Stop Audio';
+                toggleAudioButton.classList.remove('btn-success');
+                toggleAudioButton.classList.add('btn-danger');
+                audioStarted = true;
+            }
+        } else {
+            socket.off('audio');
+            if (pcmPlayer) {
+                pcmPlayer.destroy();
+                pcmPlayer = null;
+            }
+
+            cosLight.classList.remove('active');
+            console.log('Audio stopped');
+            toggleAudioButton.textContent = 'Start Audio';
+            toggleAudioButton.classList.remove('btn-danger');
+            toggleAudioButton.classList.add('btn-success');
+            audioStarted = false;
+        }
+    });
+
+    document.getElementById('ptt').addEventListener('mousedown', async () => {
+        socket.emit("GRP_VCH_REQ", { "dstId": "1", "srcId": "1" });
+
+        socket.on("GRP_VCH_RSP", (data) => {
+            console.log(data);
+            if (data.status === 0) {
+                grantVoiceChannel();
+                console.log('GRP_VCH_RSP grant');
+            } else {
+                denyVoiceChannel();
+                console.log('GRP_VCH_RSP denied');
+            }
+        });
+
+    });
+
+    document.getElementById('ptt').addEventListener('mouseup', () => {
+        socket.emit("GRP_VCH_REL", { "channel": "444.000.000", "dstId": "1", "srcId": "1" });
+        pttLight.classList.remove('transmitting');
+        micCapture.stopCapture();
+        console.log('Recording stopped');
+    });
+
+    async function grantVoiceChannel() {
+        pttLight.classList.add('transmitting');
+        await setup();
+        tpt_generate();
+
+        micCapture.captureMicrophone(() => {
+            console.log('Microphone captured');
+        });
+    }
+
+    async function denyVoiceChannel() {
+        await setup();
+        bonk();
+    }
+
+    function constructUSRPPacket(cmd, packetType, ptt) {
+        const audioDataLength = cmd.length;
+        const headerLength = 32;
+        const minPacketLength = 320;
+        const packetLength = Math.max(audioDataLength + headerLength, minPacketLength);
+        const usrpPacket = new ArrayBuffer(packetLength);
+        const arr = new DataView(usrpPacket);
+
+        arr.setUint8(0, 85);  // U
+        arr.setUint8(1, 83);  // S
+        arr.setUint8(2, 82);  // R
+        arr.setUint8(3, 80);  // P
+        arr.setUint32(4, seq, false);
+        arr.setUint32(12, ptt ? 1 : 0);
+        arr.setUint32(20, packetType << 24, false);
+
+        for (let i = 0; i < cmd.length; i++) {
+            arr.setUint8(32 + i, cmd[i]);
+        }
+
+        seq = (seq + 1) & 0xffff;
+        return new Uint8Array(usrpPacket);
+    }
+
+    function onAudioFrameReady(buffer, rms) {
+        console.log('Sending audio frame:', buffer);
+        const usrpPacket = constructUSRPPacket(buffer, 0, true);
+        socket.emit('audio', usrpPacket);
+    }
+</script>
+<script src="/js/theme-toggle.js"></script>
+</body>
+</html>

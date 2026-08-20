@@ -1,0 +1,20 @@
+{
+  "name": "dvswitch_mode_switcher",
+  "version": "1.1.0-rc1",
+  "description": "DVSwitch mode and talkgroup switcher with TGIF and BrandMeister preset switching",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["dvswitch", "dmr", "brandmeister", "tgif", "amateur-radio"],
+  "author": "",
+  "license": "LGPL-3.0-only",
+  "dependencies": {
+    "dgram": "^1.0.1",
+    "ejs": "^3.1.10",
+    "express": "^4.19.2",
+    "socket.io": "^4.7.5",
+    "yaml": "^2.4.5",
+    "yargs": "^17.7.2"
+  }
+}

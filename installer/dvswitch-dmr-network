@@ -1,0 +1,101 @@
+#!/bin/bash
+set -euo pipefail
+
+LIVE_INI=/opt/MMDVM_Bridge/MMDVM_Bridge.ini
+ACTIVE_FAVORITES=/opt/dvswitch_mode_switcher/configs/tg_alias.yml
+PRESET_DIR=/etc/dvswitch-mode-switcher/presets
+BACKUP_DIR=/var/backups/dvswitch-mode-switcher
+
+active_address() {
+    sed -n '/^\[DMR Network\]/,/^\[/s/^Address=//p' "$LIVE_INI" | head -n 1
+}
+
+show_status() {
+    local address bm_address tgif_address
+    address="$(active_address)"
+    bm_address="$(preset_address "$PRESET_DIR/MMDVM_Bridge.BM.ini")"
+    tgif_address="$(preset_address "$PRESET_DIR/MMDVM_Bridge.TGIF.ini")"
+    if [[ -n "$tgif_address" && "$address" == "$tgif_address" ]]; then
+        echo "tgif"
+    elif [[ -n "$bm_address" && "$address" == "$bm_address" ]]; then
+        echo "bm"
+    else
+        echo "unknown"
+    fi
+}
+
+preset_address() {
+    local preset="$1"
+    [[ -r "$preset" ]] || return 0
+    sed -n '/^\[DMR Network\]/,/^\[/s/^Address=//p' "$preset" | head -n 1
+}
+
+if [[ $# -ne 1 ]]; then
+    echo "Usage: $0 {bm|tgif|status}" >&2
+    exit 2
+fi
+
+case "$1" in
+    status)
+        show_status
+        exit 0
+        ;;
+    bm)
+        INI_PRESET="$PRESET_DIR/MMDVM_Bridge.BM.ini"
+        FAVORITES_PRESET="$PRESET_DIR/tg_alias.BM.yml"
+        EXPECTED_NETWORK=bm
+        ;;
+    tgif)
+        INI_PRESET="$PRESET_DIR/MMDVM_Bridge.TGIF.ini"
+        FAVORITES_PRESET="$PRESET_DIR/tg_alias.TGIF.yml"
+        EXPECTED_NETWORK=tgif
+        ;;
+    *)
+        echo "Invalid DMR network: $1" >&2
+        exit 2
+        ;;
+esac
+
+[[ -r "$INI_PRESET" ]] || { echo "INI preset is missing or unreadable: $INI_PRESET" >&2; exit 1; }
+[[ -r "$FAVORITES_PRESET" ]] || { echo "Favorites preset is missing or unreadable: $FAVORITES_PRESET" >&2; exit 1; }
+PRESET_ADDRESS="$(preset_address "$INI_PRESET")"
+case "$EXPECTED_NETWORK:$PRESET_ADDRESS" in
+    tgif:tgif.network) ;;
+    bm:*.master.brandmeister.network|bm:*.brandmeister.network|bm:*.repeater.net) ;;
+    *) echo "Preset address validation failed" >&2; exit 1 ;;
+esac
+
+mkdir -p "$BACKUP_DIR"
+STAMP="$(date +%Y%m%d-%H%M%S)"
+INI_BACKUP="$BACKUP_DIR/MMDVM_Bridge.ini.before-$1-$STAMP"
+FAVORITES_BACKUP="$BACKUP_DIR/tg_alias.yml.before-$1-$STAMP"
+cp -a "$LIVE_INI" "$INI_BACKUP"
+cp -a "$ACTIVE_FAVORITES" "$FAVORITES_BACKUP"
+TEMP_INI="${LIVE_INI}.dmr-switch.$$"
+TEMP_FAVORITES="${ACTIVE_FAVORITES}.dmr-switch.$$"
+
+rollback() {
+    rc=$?
+    trap - ERR
+    rm -f "$TEMP_INI" "$TEMP_FAVORITES"
+    cp -a "$INI_BACKUP" "$LIVE_INI"
+    install -o asl -g asl -m 0644 "$FAVORITES_BACKUP" "$ACTIVE_FAVORITES"
+    systemctl restart analog_bridge.service mmdvm_bridge.service >/dev/null 2>&1 || true
+    echo "DMR switch failed; restored both configuration files" >&2
+    exit "$rc"
+}
+trap rollback ERR
+
+install -o root -g root -m 0600 "$INI_PRESET" "$TEMP_INI"
+install -o asl -g asl -m 0644 "$FAVORITES_PRESET" "$TEMP_FAVORITES"
+mv -f "$TEMP_INI" "$LIVE_INI"
+mv -f "$TEMP_FAVORITES" "$ACTIVE_FAVORITES"
+systemctl restart analog_bridge.service mmdvm_bridge.service
+sleep 3
+/opt/MMDVM_Bridge/dvswitch.sh mode dmr
+[[ "$(active_address)" == "$PRESET_ADDRESS" ]]
+cmp -s "$ACTIVE_FAVORITES" "$FAVORITES_PRESET"
+systemctl is-active --quiet analog_bridge.service
+systemctl is-active --quiet mmdvm_bridge.service
+trap - ERR
+echo "DMR network and favorites switched to $(show_status)"

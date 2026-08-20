@@ -1,0 +1,38 @@
+# Config directory
+configs/*
+
+# Config
+!configs/config.example.yml
+
+# Alias
+!configs/tg_alias.example.yml
+
+# DB
+db/*
+!db/.gitkeep
+
+.idea
+.idea/*
+.idea/**
+
+# Tests
+tests/*
+tests
+
+bin/
+bin/*
+bin/**
+
+# Dependency directories
+node_modules/
+
+# Optional npm cache directory
+.npm
+
+# Generated DMR presets contain private network credentials
+presets/MMDVM_Bridge.BM.ini
+presets/MMDVM_Bridge.TGIF.ini
+*.before-*
+*.backup
+*.bak
+.env

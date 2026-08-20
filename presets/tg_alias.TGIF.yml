@@ -1,0 +1,143 @@
+modes:
+  - DMR:
+      talkgroups:
+        - alias: Ham Link ARC
+          tgid: "85000"
+        - alias: TGIF The Mothership
+          tgid: "31665"
+        - alias: NC Rippin Lips
+          tgid: "27520"
+        - alias: MUDDUCKS
+          tgid: "314255"
+        - alias: Colorado 720 Interlink
+          tgid: "720"
+        - alias: Florida Panhandle Ragchew
+          tgid: "850"
+        - alias: East Coast Reflector
+          tgid: "9050"
+        - alias: 235 Alive UK
+          tgid: "235"
+        - alias: World Wide English
+          tgid: "113"
+        - alias: The Working Crew
+          tgid: "925"
+        - alias: DISCONNECT
+          tgid: "4000"
+        - alias: PARROT
+          tgid: 9990#
+  - STFU:
+      talkgroups:
+        - alias: North America
+          tgid: "93"
+        - alias: USA Nationwide
+          tgid: "3100"
+        - alias: Worldwide English
+          tgid: "913"
+        - alias: RedditNet
+          tgid: "98003"
+        - alias: DVSwitch
+          tgid: "3166"
+        - alias: East Coast Reflector
+          tgid: "3129973"
+        - alias: Northeast
+          tgid: "3172"
+        - alias: KC-Wide
+          tgid: "313136"
+        - alias: Texas
+          tgid: "3148"
+        - alias: United Kingdom
+          tgid: "2350"
+        - alias: DISCONNECT
+          tgid: "4000"
+        - alias: PARROT
+          tgid: 9990#
+  - YSF:
+      talkgroups:
+        - alias: US-America Link
+          tgid: "32592"
+        - alias: East Coast Reflector - KR1P
+          tgid: "44444"
+        - alias: East Coast Reflector - RocketCity AL
+          tgid: "92805"
+        - alias: US-Texas SADRC
+          tgid: "40324"
+        - alias: US-KCWide
+          tgid: "32453"
+        - alias: US-FusionTech
+          tgid: "21493"
+        - alias: US-CALNET
+          tgid: "83196"
+        - alias: GB-CQ-WORLD
+          tgid: "00013"
+        - alias: AU-AUS REPEATER
+          tgid: "24160"
+  - P25:
+      talkgroups:
+        - alias: DVSwitch
+          tgid: "10200"
+        - alias: N2MRH and the FB DMR TEAM
+          tgid: "609"
+        - alias: DVSwitch P25 Reflector
+          tgid: "3166"
+        - alias: DVSwitch
+          tgid: "10201"
+        - alias: WMRA MultiMode Network
+          tgid: "7941"
+        - alias: Fun Machine Linked Repeater System
+          tgid: "10209"
+        - alias: SkyHubLink System
+          tgid: "10294"
+        - alias: NEAR900 New England P25 Network
+          tgid: "900"
+        - alias: W4NOC
+          tgid: "555"
+        - alias: KF4TIM
+          tgid: "28299"
+        - alias: Pi-Star Multi-Mode Reflector
+          tgid: "31672"
+        - alias: SouthEast Link / Lookout Mountain
+          tgid: "43389"
+        - alias: CQ-UK WORLDWIDE
+          tgid: "10120"
+        - alias: VK2HK
+          tgid: "10400"
+  - DSTAR:
+      talkgroups:
+        - alias: REF030C - US Wide Area
+          tgid: REF030CL
+        - alias: REF020C - New Jersey
+          tgid: REF020CL
+        - alias: REF014C - Western US
+          tgid: REF014CL
+        - alias: REF038C - Ohio / Regional
+          tgid: REF038CL
+        - alias: REF090B - Alabama / Regional
+          tgid: REF090BL
+        - alias: Unlink
+          tgid: "       U"
+        - alias: Echo (Parrot)
+          tgid: REF001EL
+  - NXDN:
+      talkgroups:
+        - alias: DVSwitch
+          tgid: "10200"
+        - alias: K6HP
+          tgid: "10201"
+        - alias: Place holder
+          tgid: "1200"
+        - alias: WMRA MultiMode Network
+          tgid: "7941"
+        - alias: SkyHubLink
+          tgid: "10294"
+        - alias: VK2HK
+          tgid: "10400"
+        - alias: CQ-UK WORLDWIDE
+          tgid: "10922"
+        - alias: SouthEast Link
+          tgid: "43389"
+        - alias: Pi-Star Multi-Mode Reflector
+          tgid: "31672"
+        - alias: Unlink
+          tgid: "9999"
+        - alias: Parrot
+          tgid: "10"

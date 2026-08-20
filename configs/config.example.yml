@@ -1,0 +1,39 @@
+# This file is part of the DVSwitch Mode Switcher project.
+#
+# (c) 2024 Caleb <ko4uyj@gmail.com>
+#
+# For the full copyright and license information,
+# see the LICENSE file that was distributed with this source code.
+
+# Address to bind the server to
+address: 0.0.0.0
+
+# Port to bind the server to
+port: 3000
+
+# Interval to reload the TG list
+tgReloadInterval: 6000 # (ms)
+
+# Path to the dvswitch bash file
+dvswitch_path: "/opt/MMDVM_Bridge/dvswitch.sh"
+
+# Path to the tg alias file
+alias_path: "./configs/tg_alias.yml"
+
+# Restricted production helper used by the BM/TGIF selector
+dmr_network_helper: "/usr/local/sbin/dvswitch-dmr-network-prod"
+
+# USRP Info
+usrp:
+  enabled: false
+  receivePort: 34001
+  sendPort: 32001
+  sendAddress: 127.0.0.1
+  receiveAddress: 0.0.0.0
+
+  repeater:
+    enabled: false
+    receivePort: 34010
+    sendPort: 32005
+    sendAddress: 127.0.0.1
+    receiveAddress: 0.0.0.0

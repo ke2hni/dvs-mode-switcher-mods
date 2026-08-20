@@ -1,0 +1,3 @@
+asl ALL=(root) NOPASSWD: /usr/local/sbin/dvswitch-dmr-network-prod bm
+asl ALL=(root) NOPASSWD: /usr/local/sbin/dvswitch-dmr-network-prod tgif
+asl ALL=(root) NOPASSWD: /usr/local/sbin/dvswitch-dmr-network-prod status
