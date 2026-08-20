@@ -18,6 +18,8 @@ db/*
 # Tests
 tests/*
 tests
+!tests/
+!tests/test-merge-favorites.js
 
 bin/
 bin/*

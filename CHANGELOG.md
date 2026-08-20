@@ -2,6 +2,14 @@
 
 All notable public releases of this DVSwitch Mode Switcher fork are recorded here.
 
+## 1.1.0-rc2 - 2026-08-20
+
+- Added automatic clean, first-install and upgrade Mode Switcher paths.
+- Added YAML-aware preservation of existing favorites during upgrades.
+- Ask which DMR network owns the existing DMR favorites, while copying non-DMR favorites into both network presets.
+- Preserve an existing production `config.yml` during upgrades while enforcing the restricted production helper path.
+- Retain previously customized protected BM and TGIF DMR favorites when available.
+
 ## 1.1.0-rc1 - 2026-08-20
 
 - Added STFU as a selectable mode with favorites.

@@ -22,8 +22,20 @@ This installer installs DVSwitch Mode Switcher. It does not install the underlyi
 Log into the DVSwitch server and run this single command:
 
 ```bash
-cd /tmp && git clone https://github.com/ke2hni/dvs-mode-switcher-mods.git && cd dvs-mode-switcher-mods && sudo bash ./install-dvswitch-mode-switcher.sh --clean
+install_dir=$(mktemp -d /tmp/dvs-mode-switcher-install.XXXXXX) && git clone https://github.com/ke2hni/dvs-mode-switcher-mods.git "$install_dir" && cd "$install_dir" && sudo bash ./install-dvswitch-mode-switcher.sh
 ```
+
+The normal command automatically selects a first installation or an upgrade. To deliberately discard previous Mode Switcher settings and presets, add `--clean` to the end of the command.
+
+## Installation modes
+
+| Mode | Selection | Behavior |
+|---|---|---|
+| Clean | Explicit `--clean` | Ignores previous Mode Switcher settings and presets and builds a fresh production installation from the live DVSwitch INI and repository defaults. |
+| First | Automatic when no Mode Switcher is detected | Installs the enhanced Mode Switcher for the first time while reading the existing DVSwitch configuration. |
+| Upgrade | Automatic when `/opt/dvswitch_mode_switcher/package.json` exists | Preserves the production configuration, credentials and favorites while applying the current enhancements. |
+
+All three modes require an existing working DVSwitch installation. “First” means the first installation of this Mode Switcher, not the installation of the underlying DVSwitch packages.
 
 The installer will:
 
@@ -33,7 +45,7 @@ The installer will:
 4. Request any unavailable BM or TGIF network password using hidden input.
 5. Ask which DMR network should be active initially.
 6. Display a password-free installation summary and request confirmation.
-7. Back up an existing Mode Switcher installation.
+7. Detect a clean, first-install or upgrade operation and back up existing files.
 8. Install the enhanced application and restricted system integration.
 9. Generate protected BM and TGIF presets from the existing working MMDVM configuration.
 10. Activate the selected network and verify the web interface, favorites and bridge services.
@@ -89,6 +101,8 @@ update_dir=$(mktemp -d /tmp/dvs-mode-switcher-update.XXXXXX) && git clone https:
 
 Normal updates may reuse protected BM/TGIF presets already installed on the system. `--clean` deliberately ignores those old Mode Switcher presets and rebuilds them from the live DVSwitch configuration.
 
+During an upgrade, the installer asks whether the DMR section in the active favorites file belongs to `bm` or `tgif`. It assigns that DMR list only to the selected network. Existing STFU, YSF, P25, D-STAR, NXDN and any other non-DMR mode lists are copied to both network presets. A customized DMR list already saved for the other network is retained when available.
+
 ## Installed files
 
 | Item | Location |
@@ -121,7 +135,7 @@ Selecting TGIF or BrandMeister from the page installs the corresponding MMDVM pr
 - `presets/tg_alias.TGIF.yml` contains TGIF DMR favorites.
 - STFU, YSF, P25, D-STAR and NXDN favorites are identical in both files.
 
-Favorites can be edited before installation or directly in the installed preset files. Keep the BM and TGIF non-DMR sections synchronized.
+Favorites can be edited before installation or directly in the installed preset files. Upgrade migrations synchronize the non-DMR sections while keeping each network's DMR favorites separate.
 
 ## Restoring an earlier installation
 

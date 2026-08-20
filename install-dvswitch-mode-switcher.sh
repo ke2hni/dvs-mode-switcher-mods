@@ -16,6 +16,8 @@ SCRIPT_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 STAMP="$(date +%Y%m%d-%H%M%S)"
 BACKUP_ROOT="/var/backups/dvswitch-mode-switcher/install-$STAMP"
 CLEAN=0
+INSTALL_MODE=
+EXISTING_FAVORITES_NETWORK=
 SWAPPED=0
 INSTALL_COMPLETE=0
 OLD_APP=
@@ -38,6 +40,14 @@ esac
 [[ -x "$DVSWITCH_SH" ]] || die "DVSwitch control script is missing: $DVSWITCH_SH"
 getent passwd asl >/dev/null || die "Required ASL user 'asl' does not exist."
 command -v systemctl >/dev/null || die "systemd is required."
+
+if (( CLEAN )); then
+    INSTALL_MODE=clean
+elif [[ -d "$APP_DIR" && -f "$APP_DIR/package.json" ]]; then
+    INSTALL_MODE=upgrade
+else
+    INSTALL_MODE=first
+fi
 
 umask 077
 TMP_DIR="$(mktemp -d /tmp/dvswitch-mode-switcher-install.XXXXXX)"
@@ -159,8 +169,8 @@ elif [[ "$CURRENT_NETWORK" == tgif ]]; then
     if credential_usable "$CURRENT_PASSWORD"; then TGIF_PASSWORD="$CURRENT_PASSWORD"; fi
 fi
 
-# Upgrades may reuse protected presets. --clean ignores them to simulate a first Mode Switcher installation.
-if (( CLEAN == 0 )); then
+# Upgrades may reuse protected presets. Clean and first installs start from repository defaults.
+if [[ "$INSTALL_MODE" == upgrade ]]; then
     if [[ -r "$PRESET_DIR/MMDVM_Bridge.BM.ini" ]]; then
         [[ -n "$BM_ADDRESS" ]] || BM_ADDRESS="$(ini_get "$PRESET_DIR/MMDVM_Bridge.BM.ini" 'DMR Network' Address)"
         candidate="$(ini_get "$PRESET_DIR/MMDVM_Bridge.BM.ini" 'DMR Network' Password)"
@@ -217,11 +227,18 @@ if [[ -z "$BM_PASSWORD" ]]; then printf '\nUse the BrandMeister Hotspot Security
 if [[ -z "$TGIF_PASSWORD" ]]; then printf '\nUse the TGIF secured-connection password, not the website account password.\n'; prompt_secret 'TGIF secured-connection password'; TGIF_PASSWORD="$REPLY_SECRET"; REPLY_SECRET=; fi
 
 DEFAULT_NETWORK="$CURRENT_NETWORK"; [[ "$DEFAULT_NETWORK" == bm || "$DEFAULT_NETWORK" == tgif ]] || DEFAULT_NETWORK=tgif
+if [[ "$INSTALL_MODE" == upgrade && -r "$APP_DIR/configs/tg_alias.yml" ]]; then
+    EXISTING_FAVORITES_NETWORK="$(prompt_with_default 'Existing DMR favorites belong to (bm or tgif)' "$DEFAULT_NETWORK")"
+    EXISTING_FAVORITES_NETWORK="${EXISTING_FAVORITES_NETWORK,,}"
+    [[ "$EXISTING_FAVORITES_NETWORK" == bm || "$EXISTING_FAVORITES_NETWORK" == tgif ]] || die "Existing favorites network must be bm or tgif."
+    DEFAULT_NETWORK="$EXISTING_FAVORITES_NETWORK"
+fi
 INITIAL_NETWORK="$(prompt_with_default 'Initial DMR network (bm or tgif)' "$DEFAULT_NETWORK")"; INITIAL_NETWORK="${INITIAL_NETWORK,,}"
 [[ "$INITIAL_NETWORK" == bm || "$INITIAL_NETWORK" == tgif ]] || die "Initial network must be bm or tgif."
 
 printf '\nInstallation summary (passwords hidden)\n'
-printf '  Install type: %s\n' "$([[ $CLEAN -eq 1 ]] && printf clean || printf upgrade)"
+printf '  Install type: %s\n' "$INSTALL_MODE"
+[[ -z "$EXISTING_FAVORITES_NETWORK" ]] || printf '  Existing DMR favorites: assigned to %s\n' "$EXISTING_FAVORITES_NETWORK"
 printf '  Production directory/port: %s / 3000\n' "$APP_DIR"
 printf '  BrandMeister master: %s\n' "$BM_ADDRESS"
 printf '  Initial network: %s\n' "$INITIAL_NETWORK"
@@ -256,10 +273,29 @@ fi
 [[ -f "$STAGE/installer/dvswitch-dmr-network" ]] || die "Repository is missing the DMR helper."
 [[ -f "$STAGE/installer/dvswitch_mode_switcher.service" ]] || die "Repository is missing the production service."
 [[ -f "$STAGE/installer/dvswitch-mode-switcher.sudoers" ]] || die "Repository is missing the sudo policy."
+[[ -f "$STAGE/installer/merge-favorites.js" ]] || die "Repository is missing the favorites migration tool."
 [[ -f "$STAGE/presets/tg_alias.BM.yml" && -f "$STAGE/presets/tg_alias.TGIF.yml" ]] || die "Repository is missing favorites."
-install -m 0644 "$STAGE/configs/config.example.yml" "$STAGE/configs/config.yml"
-case "$INITIAL_NETWORK" in bm) install -m 0644 "$STAGE/presets/tg_alias.BM.yml" "$STAGE/configs/tg_alias.yml" ;; tgif) install -m 0644 "$STAGE/presets/tg_alias.TGIF.yml" "$STAGE/configs/tg_alias.yml" ;; esac
 (cd "$STAGE" && npm ci --omit=dev)
+
+if [[ "$INSTALL_MODE" == upgrade && -r "$APP_DIR/configs/config.yml" ]]; then
+    awk '
+        /^[[:space:]]*dmr_network_helper:[[:space:]]*/ { print "dmr_network_helper: /usr/local/sbin/dvswitch-dmr-network-prod"; found=1; next }
+        { print }
+        END { if (!found) print "dmr_network_helper: /usr/local/sbin/dvswitch-dmr-network-prod" }
+    ' "$APP_DIR/configs/config.yml" >"$STAGE/configs/config.yml"
+else
+    install -m 0644 "$STAGE/configs/config.example.yml" "$STAGE/configs/config.yml"
+fi
+
+if [[ "$INSTALL_MODE" == upgrade && -n "$EXISTING_FAVORITES_NETWORK" ]]; then
+    log "Preserving existing favorites and assigning DMR to $EXISTING_FAVORITES_NETWORK"
+    MERGE_ARGS=(--active "$APP_DIR/configs/tg_alias.yml" --bm "$STAGE/presets/tg_alias.BM.yml" --tgif "$STAGE/presets/tg_alias.TGIF.yml" --network "$EXISTING_FAVORITES_NETWORK")
+    [[ ! -r "$PRESET_DIR/tg_alias.BM.yml" ]] || MERGE_ARGS+=(--protected-bm "$PRESET_DIR/tg_alias.BM.yml")
+    [[ ! -r "$PRESET_DIR/tg_alias.TGIF.yml" ]] || MERGE_ARGS+=(--protected-tgif "$PRESET_DIR/tg_alias.TGIF.yml")
+    node "$STAGE/installer/merge-favorites.js" "${MERGE_ARGS[@]}"
+fi
+
+case "$INITIAL_NETWORK" in bm) install -m 0644 "$STAGE/presets/tg_alias.BM.yml" "$STAGE/configs/tg_alias.yml" ;; tgif) install -m 0644 "$STAGE/presets/tg_alias.TGIF.yml" "$STAGE/configs/tg_alias.yml" ;; esac
 chown -R root:root "$STAGE"
 find "$STAGE" -type d -exec chmod 0755 {} +
 find "$STAGE" -type f -exec chmod 0644 {} +
@@ -274,7 +310,7 @@ cp -a "$LIVE_INI" "$BACKUP_ROOT/live-MMDVM_Bridge.ini"
 [[ ! -f "$APP_DIR/configs/tg_alias.yml" ]] || cp -a "$APP_DIR/configs/tg_alias.yml" "$BACKUP_ROOT/active-tg_alias.yml"
 if [[ -d "$PRESET_DIR" ]]; then cp -a "$PRESET_DIR" "$BACKUP_ROOT/presets"; else : >"$BACKUP_ROOT/presets.absent"; fi
 systemctl stop "$SERVICE" >/dev/null 2>&1 || true
-if [[ -e "$APP_DIR" ]]; then OLD_APP="${APP_DIR}.before-clean-$STAMP"; mv "$APP_DIR" "$OLD_APP"; fi
+if [[ -e "$APP_DIR" ]]; then OLD_APP="${APP_DIR}.before-${INSTALL_MODE}-$STAMP"; mv "$APP_DIR" "$OLD_APP"; fi
 mv "$STAGE" "$APP_DIR"; STAGE=; SWAPPED=1
 
 log "Installing protected presets and restricted system integration"
