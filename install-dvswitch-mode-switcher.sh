@@ -24,7 +24,7 @@ TMP_DIR=
 
 log() { printf '\n[%s] %s\n' "$(date +%H:%M:%S)" "$*"; }
 die() { printf '\nERROR: %s\n' "$*" >&2; exit 1; }
-usage() { printf 'Usage: sudo %s [--clean]\n' "${0##*/}"; printf '  --clean  Fresh production Mode Switcher install; DVSwitch and development port 3001 remain untouched.\n'; }
+usage() { printf 'Usage: sudo %s [--clean]\n' "${0##*/}"; printf '  --clean  Install a fresh production copy of DVSwitch Mode Switcher.\n'; }
 
 case "${1:-}" in
     --clean) CLEAN=1 ;;
@@ -220,7 +220,6 @@ INITIAL_NETWORK="$(prompt_with_default 'Initial DMR network (bm or tgif)' "$DEFA
 printf '\nInstallation summary (passwords hidden)\n'
 printf '  Install type: %s\n' "$([[ $CLEAN -eq 1 ]] && printf clean || printf upgrade)"
 printf '  Production directory/port: %s / 3000\n' "$APP_DIR"
-printf '  Development installation: untouched\n'
 printf '  BrandMeister master: %s\n' "$BM_ADDRESS"
 printf '  Initial network: %s\n' "$INITIAL_NETWORK"
 read -rp 'Continue with installation? [y/N]: ' CONFIRM </dev/tty
@@ -285,7 +284,7 @@ log "Activating $INITIAL_NETWORK and matching favorites"
 "$HELPER" "$INITIAL_NETWORK"
 systemctl enable --now "$SERVICE"; sleep 3
 
-log "Verifying production while leaving development untouched"
+log "Verifying the production installation"
 systemctl is-active --quiet "$SERVICE"; systemctl is-active --quiet analog_bridge.service; systemctl is-active --quiet mmdvm_bridge.service
 [[ "$(sudo -u asl sudo -n "$HELPER" status)" == "$INITIAL_NETWORK" ]]
 cmp -s "$APP_DIR/configs/tg_alias.yml" "$PRESET_DIR/tg_alias.${INITIAL_NETWORK^^}.yml"
@@ -304,4 +303,3 @@ printf '  Production: http://%s:3000\n' "${IP_ADDR:-NODE-IP}"
 printf '  Service: %s (active, PID %s, zero restarts)\n' "$SERVICE" "$MAIN_PID"
 printf '  Active DMR network: %s\n' "$INITIAL_NETWORK"
 printf '  Backup: %s\n' "$BACKUP_ROOT"
-printf '  Development port 3001 was not modified.\n'
