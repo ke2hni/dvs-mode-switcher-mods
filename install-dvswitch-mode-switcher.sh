@@ -62,7 +62,10 @@ rollback() {
         restore_file helper "$HELPER"
         restore_file unit "$UNIT_FILE"
         restore_file sudoers "$SUDOERS_FILE"
-        if [[ -d "$BACKUP_ROOT/presets" ]]; then install -d -o root -g root -m 0755 "$PRESET_DIR"; cp -a "$BACKUP_ROOT/presets/." "$PRESET_DIR/" || true; fi
+        if [[ -d "$BACKUP_ROOT/presets" ]]; then install -d -o root -g root -m 0755 "$PRESET_DIR"; cp -a "$BACKUP_ROOT/presets/." "$PRESET_DIR/" || true; elif [[ -e "$BACKUP_ROOT/presets.absent" ]]; then rm -rf -- "$PRESET_DIR"; fi
+        [[ ! -e "$BACKUP_ROOT/live-MMDVM_Bridge.ini" ]] || cp -a "$BACKUP_ROOT/live-MMDVM_Bridge.ini" "$LIVE_INI"
+        if [[ -e "$BACKUP_ROOT/active-tg_alias.yml" && -d "$APP_DIR/configs" ]]; then install -o asl -g asl -m 0644 "$BACKUP_ROOT/active-tg_alias.yml" "$APP_DIR/configs/tg_alias.yml"; fi
+        systemctl restart analog_bridge.service mmdvm_bridge.service >/dev/null 2>&1 || true
         systemctl daemon-reload >/dev/null 2>&1 || true
         systemctl enable --now "$SERVICE" >/dev/null 2>&1 || true
     fi
@@ -245,7 +248,7 @@ NODE_MAJOR="$(node -p 'Number(process.versions.node.split(".")[0])')"; (( NODE_M
 log "Preparing the enhanced production application"
 STAGE="/opt/.dvswitch-mode-switcher-stage-$STAMP"
 if [[ -d "$SCRIPT_DIR/modules" && -f "$SCRIPT_DIR/package.json" && -d "$SCRIPT_DIR/installer" ]]; then
-    if [[ -d "$SCRIPT_DIR/.git" ]]; then git clone --local "$SCRIPT_DIR" "$STAGE"; else mkdir -p "$STAGE"; cp -a "$SCRIPT_DIR/." "$STAGE/"; fi
+    if [[ -d "$SCRIPT_DIR/.git" ]]; then git clone --no-local "$SCRIPT_DIR" "$STAGE"; else mkdir -p "$STAGE"; cp -a "$SCRIPT_DIR/." "$STAGE/"; fi
 else
     git clone --depth 1 "$REPO_URL" "$STAGE"
 fi
@@ -257,13 +260,19 @@ fi
 install -m 0644 "$STAGE/configs/config.example.yml" "$STAGE/configs/config.yml"
 case "$INITIAL_NETWORK" in bm) install -m 0644 "$STAGE/presets/tg_alias.BM.yml" "$STAGE/configs/tg_alias.yml" ;; tgif) install -m 0644 "$STAGE/presets/tg_alias.TGIF.yml" "$STAGE/configs/tg_alias.yml" ;; esac
 (cd "$STAGE" && npm ci --omit=dev)
-chown -R root:root "$STAGE"; chown asl:asl "$STAGE/configs" "$STAGE/configs/config.yml" "$STAGE/configs/tg_alias.yml"
+chown -R root:root "$STAGE"
+find "$STAGE" -type d -exec chmod 0755 {} +
+find "$STAGE" -type f -exec chmod 0644 {} +
+chmod 0755 "$STAGE/install-dvswitch-mode-switcher.sh" "$STAGE/installer/dvswitch-dmr-network"
+chown asl:asl "$STAGE/configs" "$STAGE/configs/config.yml" "$STAGE/configs/tg_alias.yml"
 chmod 0755 "$STAGE/configs"; chmod 0644 "$STAGE/configs/config.yml" "$STAGE/configs/tg_alias.yml"
 
 log "Backing up the current production installation"
 install -d -o root -g root -m 0700 "$BACKUP_ROOT"
 save_or_mark_absent "$HELPER" helper; save_or_mark_absent "$UNIT_FILE" unit; save_or_mark_absent "$SUDOERS_FILE" sudoers
-[[ ! -d "$PRESET_DIR" ]] || cp -a "$PRESET_DIR" "$BACKUP_ROOT/presets"
+cp -a "$LIVE_INI" "$BACKUP_ROOT/live-MMDVM_Bridge.ini"
+[[ ! -f "$APP_DIR/configs/tg_alias.yml" ]] || cp -a "$APP_DIR/configs/tg_alias.yml" "$BACKUP_ROOT/active-tg_alias.yml"
+if [[ -d "$PRESET_DIR" ]]; then cp -a "$PRESET_DIR" "$BACKUP_ROOT/presets"; else : >"$BACKUP_ROOT/presets.absent"; fi
 systemctl stop "$SERVICE" >/dev/null 2>&1 || true
 if [[ -e "$APP_DIR" ]]; then OLD_APP="${APP_DIR}.before-clean-$STAMP"; mv "$APP_DIR" "$OLD_APP"; fi
 mv "$STAGE" "$APP_DIR"; STAGE=; SWAPPED=1

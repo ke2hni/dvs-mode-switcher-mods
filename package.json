@@ -6,11 +6,16 @@
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
-  "keywords": ["dvswitch", "dmr", "brandmeister", "tgif", "amateur-radio"],
+  "keywords": [
+    "dvswitch",
+    "dmr",
+    "brandmeister",
+    "tgif",
+    "amateur-radio"
+  ],
   "author": "",
   "license": "LGPL-3.0-only",
   "dependencies": {
-    "dgram": "^1.0.1",
     "ejs": "^3.1.10",
     "express": "^4.19.2",
     "socket.io": "^4.7.5",

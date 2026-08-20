@@ -13,6 +13,9 @@ All notable public releases of this DVSwitch Mode Switcher fork are recorded her
 - Added password-safe credential discovery and hidden prompting.
 - Preserved the original mode and talkgroup switching routes.
 - Added an `asl`-owned production service on port 3000 with narrowly restricted sudo permissions.
+- Corrected staged application permissions for the unprivileged `asl` service account.
+- Made local source cloning safe across different filesystems.
+- Removed the unnecessary deprecated `dgram` npm dependency.
 
 ## 1.0.0
 

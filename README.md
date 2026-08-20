@@ -22,7 +22,7 @@ This installer installs DVSwitch Mode Switcher. It does not install the underlyi
 Log into the DVSwitch server and run this single command:
 
 ```bash
-cd /tmp && git clone https://github.com/ke2hni/dvs-mode-switcher-mods.git && cd dvs-mode-switcher-mods && sudo ./install-dvswitch-mode-switcher.sh --clean
+cd /tmp && git clone https://github.com/ke2hni/dvs-mode-switcher-mods.git && cd dvs-mode-switcher-mods && sudo bash ./install-dvswitch-mode-switcher.sh --clean
 ```
 
 The installer will:
@@ -84,7 +84,7 @@ sudo journalctl -u dvswitch_mode_switcher.service -n 50 --no-pager
 Download the current repository and run the installer without `--clean`:
 
 ```bash
-update_dir=$(mktemp -d /tmp/dvs-mode-switcher-update.XXXXXX) && git clone https://github.com/ke2hni/dvs-mode-switcher-mods.git "$update_dir" && cd "$update_dir" && sudo ./install-dvswitch-mode-switcher.sh
+update_dir=$(mktemp -d /tmp/dvs-mode-switcher-update.XXXXXX) && git clone https://github.com/ke2hni/dvs-mode-switcher-mods.git "$update_dir" && cd "$update_dir" && sudo bash ./install-dvswitch-mode-switcher.sh
 ```
 
 Normal updates may reuse protected BM/TGIF presets already installed on the system. `--clean` deliberately ignores those old Mode Switcher presets and rebuilds them from the live DVSwitch configuration.
