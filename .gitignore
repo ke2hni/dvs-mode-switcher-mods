@@ -20,6 +20,7 @@ tests/*
 tests
 !tests/
 !tests/test-merge-favorites.js
+!tests/test-helper-permissions.js
 
 bin/
 bin/*

@@ -125,9 +125,9 @@ No credential-bearing MMDVM INI files are stored in this repository. The install
 - `Address`
 - `Password`
 
-It verifies that the generated BM and TGIF presets are otherwise identical. The installed presets are owned by `root:root` with mode `0600`.
+It verifies that the generated BM and TGIF presets are otherwise identical. The protected presets are owned by `root:root` with mode `0600`. The selected live `MMDVM_Bridge.ini` is installed as `root:www-data` with mode `0640`, allowing the DVSwitch Dashboard to read it without making the network credentials world-readable.
 
-Selecting TGIF or BrandMeister from the page installs the corresponding MMDVM preset and favorites together, restarts Analog_Bridge and MMDVM_Bridge, returns DVSwitch to DMR mode, and verifies service health. If switching fails, both configuration files are rolled back.
+Selecting TGIF or BrandMeister from the page installs the corresponding MMDVM preset and favorites together, restarts Analog_Bridge and MMDVM_Bridge, returns DVSwitch to DMR mode, and verifies service health and dashboard access. If switching fails, both configuration files are rolled back.
 
 ## DMR favorites
 

@@ -2,6 +2,13 @@
 
 All notable public releases of this DVSwitch Mode Switcher fork are recorded here.
 
+## 1.1.0-rc3 - 2026-08-20
+
+- Keep protected credential-bearing MMDVM presets at `root:root 0600`.
+- Install the active live `MMDVM_Bridge.ini` as `root:www-data 0640` so the DVSwitch Dashboard can read it without exposing credentials to other users.
+- Verify live INI ownership, mode and dashboard readability after every network switch and installation.
+- Added a regression test preventing protected-preset permissions from being applied to the live INI again.
+
 ## 1.1.0-rc2 - 2026-08-20
 
 - Added automatic clean, first-install and upgrade Mode Switcher paths.

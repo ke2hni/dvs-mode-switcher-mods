@@ -39,6 +39,7 @@ esac
 [[ -r "$LIVE_INI" ]] || die "DVSwitch is not configured: $LIVE_INI is missing or unreadable."
 [[ -x "$DVSWITCH_SH" ]] || die "DVSwitch control script is missing: $DVSWITCH_SH"
 getent passwd asl >/dev/null || die "Required ASL user 'asl' does not exist."
+getent passwd www-data >/dev/null || die "Required dashboard account 'www-data' does not exist."
 command -v systemctl >/dev/null || die "systemd is required."
 
 if (( CLEAN )); then
@@ -327,6 +328,8 @@ systemctl daemon-reload; systemctl reset-failed "$SERVICE" >/dev/null 2>&1 || tr
 
 log "Activating $INITIAL_NETWORK and matching favorites"
 "$HELPER" "$INITIAL_NETWORK"
+[[ "$(stat -c '%U:%G:%a' "$LIVE_INI")" == root:www-data:640 ]]
+runuser -u www-data -- test -r "$LIVE_INI"
 systemctl enable --now "$SERVICE"; sleep 3
 
 log "Verifying the production installation"

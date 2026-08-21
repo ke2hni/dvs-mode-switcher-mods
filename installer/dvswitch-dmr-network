@@ -5,6 +5,9 @@ LIVE_INI=/opt/MMDVM_Bridge/MMDVM_Bridge.ini
 ACTIVE_FAVORITES=/opt/dvswitch_mode_switcher/configs/tg_alias.yml
 PRESET_DIR=/etc/dvswitch-mode-switcher/presets
 BACKUP_DIR=/var/backups/dvswitch-mode-switcher
+LIVE_INI_OWNER=root
+LIVE_INI_GROUP=www-data
+LIVE_INI_MODE=0640
 
 active_address() {
     sed -n '/^\[DMR Network\]/,/^\[/s/^Address=//p' "$LIVE_INI" | head -n 1
@@ -58,6 +61,7 @@ esac
 
 [[ -r "$INI_PRESET" ]] || { echo "INI preset is missing or unreadable: $INI_PRESET" >&2; exit 1; }
 [[ -r "$FAVORITES_PRESET" ]] || { echo "Favorites preset is missing or unreadable: $FAVORITES_PRESET" >&2; exit 1; }
+getent passwd "$LIVE_INI_GROUP" >/dev/null || { echo "Dashboard account is missing: $LIVE_INI_GROUP" >&2; exit 1; }
 PRESET_ADDRESS="$(preset_address "$INI_PRESET")"
 case "$EXPECTED_NETWORK:$PRESET_ADDRESS" in
     tgif:tgif.network) ;;
@@ -86,7 +90,7 @@ rollback() {
 }
 trap rollback ERR
 
-install -o root -g root -m 0600 "$INI_PRESET" "$TEMP_INI"
+install -o "$LIVE_INI_OWNER" -g "$LIVE_INI_GROUP" -m "$LIVE_INI_MODE" "$INI_PRESET" "$TEMP_INI"
 install -o asl -g asl -m 0644 "$FAVORITES_PRESET" "$TEMP_FAVORITES"
 mv -f "$TEMP_INI" "$LIVE_INI"
 mv -f "$TEMP_FAVORITES" "$ACTIVE_FAVORITES"
@@ -95,6 +99,8 @@ sleep 3
 /opt/MMDVM_Bridge/dvswitch.sh mode dmr
 [[ "$(active_address)" == "$PRESET_ADDRESS" ]]
 cmp -s "$ACTIVE_FAVORITES" "$FAVORITES_PRESET"
+[[ "$(stat -c '%U:%G:%a' "$LIVE_INI")" == "${LIVE_INI_OWNER}:${LIVE_INI_GROUP}:${LIVE_INI_MODE#0}" ]]
+runuser -u "$LIVE_INI_GROUP" -- test -r "$LIVE_INI"
 systemctl is-active --quiet analog_bridge.service
 systemctl is-active --quiet mmdvm_bridge.service
 trap - ERR
