@@ -22,6 +22,7 @@ assert.match(restore, /apply_firewall_state "\$snapshot"/);
 assert.match(restore, /Restore failed; attempting to recover the pre-restore working state/);
 assert.match(restore, /apply_snapshot "\$SAFETY" 1/);
 assert.match(restore, /legacy backup has no recorded state; current TCP 3000 rule preserved/);
+assert.match(restore, /curl -fsS --max-time 5 http:\/\/127\.0\.0\.1:3000\/ >\/dev\/null 2>&1/);
 assert.doesNotMatch(restore, /Password/);
 
 process.stdout.write('Permanent restore regression test passed.\n');

@@ -12,6 +12,7 @@ All notable public releases of this DVS Mode Switcher fork are recorded here.
 - Keep RC8 backup compatibility while preserving the current firewall rule when legacy manifests have no recorded firewall state.
 - Corrected remaining installer-output branding to DVS Mode Switcher.
 - Added restore regression testing.
+- Suppress transient connection messages during bounded post-restore website-readiness retries while retaining final failure detection.
 
 ## 1.1.0-rc8 - 2026-08-21
 
