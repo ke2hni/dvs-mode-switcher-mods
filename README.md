@@ -106,11 +106,11 @@ cd /home/asl/dvs-mode-switcher-mods && git pull --ff-only && sudo ./install-dvsw
 | 🆕 First | Automatic when no Mode Switcher is detected | Installs DVS Mode Switcher while reading the existing DVSwitch configuration. |
 | ⬆️ Upgrade | Automatic when `/opt/dvswitch_mode_switcher/package.json` exists | Preserves production configuration, credentials and favorites while applying updates. |
 | 🧹 Clean | Explicit `--clean` option | Rebuilds DVS Mode Switcher settings and presets from the live DVSwitch INI and repository defaults. |
-| ♻️ Restore | Explicit `--restore [install-TIMESTAMP]` option | Restores a permanent pre-install snapshot, including the previous application or absence state, configuration, favorites, integration, service state and recorded firewall state. |
+| ♻️ Restore | Explicit `--restore` option | Lists the available restore points, lets the user choose one, and restores its previous application or absence state, configuration, favorites, integration, service state and recorded firewall state. |
 
 First, Upgrade and Clean require an existing DVSwitch installation. Restore requires a permanent snapshot under `/var/backups/dvswitch-mode-switcher/`.
 
-Running `--restore` without a snapshot name lists the available permanent installation backups and asks the user to select one. Supplying an exact `install-YYYYMMDD-HHMMSS` name restores that snapshot directly. Before changing anything, Restore creates a separate permanent safety snapshot of the current working state and automatically attempts recovery from it if restoration verification fails.
+Running `--restore` lists the available permanent installation backups and asks the user to select one. Before changing anything, Restore creates a separate permanent safety snapshot of the current working state and automatically attempts recovery from it if restoration verification fails. Advanced users may optionally supply an exact `install-YYYYMMDD-HHMMSS` name to restore that snapshot directly.
 
 ---
 

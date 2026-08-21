@@ -32,8 +32,8 @@ for (const serviceFile of ['installer/dvswitch_mode_switcher.service', 'debian/d
 }
 
 assert.doesNotMatch(readme, /port 3001|TEST VERSION|node68425|testnode/i);
-assert.match(readme, /\| ♻️ Restore \| Explicit `--restore \[install-TIMESTAMP\]` option \|/);
-assert.match(readme, /Running `--restore` without a snapshot name lists the available permanent installation backups/);
+assert.match(readme, /\| ♻️ Restore \| Explicit `--restore` option \| Lists the available restore points/);
+assert.match(readme, /Running `--restore` lists the available permanent installation backups/);
 assert.match(readme, /Restore creates a separate permanent safety snapshot/);
 
 const brandingFiles = [
