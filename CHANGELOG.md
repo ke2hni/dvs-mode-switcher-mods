@@ -2,6 +2,17 @@
 
 All notable public releases of this DVS Mode Switcher fork are recorded here.
 
+## 1.1.0 - 2026-08-21
+
+- Promoted the fully validated RC11 codebase to the stable 1.1.0 release.
+- Supports first installation, safe upgrade, clean reinstall and permanent-snapshot restore workflows.
+- Adds TGIF and BrandMeister runtime switching with matched network-specific favorites and protected credentials.
+- Preserves and validates callsign, DMR, Analog_Bridge repeater/SSID and optional NXDN identity settings.
+- Adds durable root-only backups, pre-restore safety snapshots, exact service/firewall-state recovery and automatic recovery from failed restores.
+- Automatically preserves or opens TCP port 3000 with active firewalld or UFW configurations.
+- Validated on Raspberry Pi 5, ARM64 and Debian 13 through first, manual-upgrade, clean, reboot, firewall, restore, repeated-restore and controlled-failure testing.
+- Completed final product-branding, dynamic-version-display, documentation and release-regression audits.
+
 ## 1.1.0-rc11 - 2026-08-21
 
 - Remove the empty `/etc/dvswitch-mode-switcher` parent when restoring a snapshot that records protected presets as absent.

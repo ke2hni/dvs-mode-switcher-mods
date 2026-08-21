@@ -1,10 +1,10 @@
 {
   "name": "dvswitch_mode_switcher",
-  "version": "1.1.0-rc11",
-  "description": "DVSwitch mode and talkgroup switcher with TGIF and BrandMeister preset switching",
+  "version": "1.1.0",
+  "description": "DVS Mode Switcher web interface with TGIF and BrandMeister preset switching",
   "main": "index.js",
   "scripts": {
-    "test": "node tests/test-merge-favorites.js && node tests/test-helper-permissions.js && node tests/test-id-consistency.js && node tests/test-firewall.js && node tests/test-durable-backup.js && node tests/test-restore.js"
+    "test": "node tests/test-merge-favorites.js && node tests/test-helper-permissions.js && node tests/test-id-consistency.js && node tests/test-firewall.js && node tests/test-durable-backup.js && node tests/test-restore.js && node tests/test-release.js"
   },
   "keywords": [
     "dvswitch",

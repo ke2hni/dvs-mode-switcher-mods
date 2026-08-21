@@ -1,5 +1,5 @@
 /**
- * This file is part of the DVSwitch Mode Switcher project.
+ * This file is part of the DVS Mode Switcher project.
  *
  * (c) 2024 Caleb <ko4uyj@gmail.com>
  *

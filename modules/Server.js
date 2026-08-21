@@ -12,6 +12,7 @@ const UdpPrimary = require("./UdpPrimary");
 const UdpRepeater = require("./UdpRepeater");
 const GRP_VCH_RSP = require("../models/trunking_data/GRP_VCH_RSP");
 const GRP_VCH_REQ = require("../models/trunking_data/GRP_VCH_REQ");
+const packageInfo = require('../package.json');
 
 class Server {
     constructor(configPath) {
@@ -43,6 +44,8 @@ class Server {
         this.modes = this.getModes();
 
         this.app = express();
+        this.app.locals.productName = 'DVS Mode Switcher';
+        this.app.locals.appVersion = packageInfo.version;
         this.server = http.createServer(this.app);
         this.io = socketIo(this.server);
 

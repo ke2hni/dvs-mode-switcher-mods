@@ -4,7 +4,7 @@
 
 ### A simple web interface for DVSwitch mode, talkgroup and DMR-network control
 
-[![Version](https://img.shields.io/badge/version-1.1.0--rc11-2563eb?style=for-the-badge)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.1.0-2563eb?style=for-the-badge)](CHANGELOG.md)
 [![Platform](https://img.shields.io/badge/platform-ASL%203%20%7C%20Debian-0f766e?style=for-the-badge)](#-requirements)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](#-requirements)
 [![License](https://img.shields.io/badge/license-LGPL--3.0-blue?style=for-the-badge)](LICENSE)
@@ -277,14 +277,27 @@ RC8 backups remain restorable. Because RC8 manifests did not record firewall sta
 
 - ✅ First installation tested on Raspberry Pi 5, ARM64 and Debian 13
 - ✅ Upgrade installation tested
+- ✅ Upgrade from manual TGIF and BrandMeister installations tested
 - ✅ Clean reinstall tested
 - ✅ TGIF and BrandMeister switching tested
 - ✅ Network-specific favorites tested
 - ✅ Seven-digit/nine-digit DMR ID synchronization tested
 - ✅ firewalld TCP 3000 creation and persistence tested
+- ✅ Missing-firewall discovery and automatic TCP 3000 creation tested
+- ✅ Permanent backup, interactive restore and exact pre-install-state recovery tested
+- ✅ Controlled restore failure and automatic safety-snapshot recovery tested
 - ✅ Dashboard-readable live INI permissions tested
 - ✅ Reboot persistence tested
 - ✅ Production service verified with zero restarts
+
+---
+
+## 📸 Screenshots
+
+<img width="1600" height="852" alt="Screenshot 2026-08-20 234650" src="https://github.com/user-attachments/assets/408c2c91-ad78-4550-b9f4-49434fe4bd5e" />
+<img width="1600" height="852" alt="Screenshot 2026-08-20 234722" src="https://github.com/user-attachments/assets/8d9ce569-0422-40d0-b935-565937eb0f7f" />
+<img width="1600" height="852" alt="Screenshot 2026-08-20 234731" src="https://github.com/user-attachments/assets/79b46496-dd73-4d06-a4cf-4af627eef8ca" />
+<img width="1600" height="852" alt="Screenshot 2026-08-20 234745" src="https://github.com/user-attachments/assets/0e933fd3-9521-41c7-b910-df2ac9ede55f" />
 
 ---
 
@@ -292,9 +305,6 @@ RC8 backups remain restorable. Because RC8 manifests did not record firewall sta
 
 Based on the original **DVS Mode Switcher** by Caleb (KO4UYJ).
 
-Licensed under **LGPL-3.0-only**. See [LICENSE](LICENSE).
+Maintained by **KE2HNI**.
 
-<img width="1600" height="852" alt="Screenshot 2026-08-20 234650" src="https://github.com/user-attachments/assets/408c2c91-ad78-4550-b9f4-49434fe4bd5e" />
-<img width="1600" height="852" alt="Screenshot 2026-08-20 234722" src="https://github.com/user-attachments/assets/8d9ce569-0422-40d0-b935-565937eb0f7f" />
-<img width="1600" height="852" alt="Screenshot 2026-08-20 234731" src="https://github.com/user-attachments/assets/79b46496-dd73-4d06-a4cf-4af627eef8ca" />
-<img width="1600" height="852" alt="Screenshot 2026-08-20 234745" src="https://github.com/user-attachments/assets/0e933fd3-9521-41c7-b910-df2ac9ede55f" />
+Licensed under **LGPL-3.0-only**. See [LICENSE](LICENSE).

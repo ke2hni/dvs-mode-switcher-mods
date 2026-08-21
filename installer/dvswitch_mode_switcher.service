@@ -1,5 +1,5 @@
 [Unit]
-Description=DVSwitch Mode Switcher web interface
+Description=DVS Mode Switcher web interface
 Wants=network-online.target
 After=network-online.target analog_bridge.service mmdvm_bridge.service
 StartLimitIntervalSec=60

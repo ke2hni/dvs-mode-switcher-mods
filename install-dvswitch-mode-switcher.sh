@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -Eeuo pipefail
 
-# Installs the enhanced web application. It does not remove or reinstall DVSwitch.
+# Installs DVS Mode Switcher. It does not remove or reinstall DVSwitch.
 APP_DIR=/opt/dvswitch_mode_switcher
 LIVE_INI=/opt/MMDVM_Bridge/MMDVM_Bridge.ini
 ANALOG_INI=/opt/Analog_Bridge/Analog_Bridge.ini
@@ -223,7 +223,7 @@ ensure_firewall_port() {
         if ufw status | grep -Eq '^3000/tcp[[:space:]]+ALLOW'; then
             printf '  Firewall: TCP port 3000 already allowed by UFW\n'
         else
-            ufw allow 3000/tcp comment 'DVSwitch Mode Switcher' >/dev/null
+            ufw allow 3000/tcp comment 'DVS Mode Switcher' >/dev/null
             FIREWALL_RULE_ADDED=1
             printf '  Firewall: allowed TCP port 3000 through UFW\n'
         fi

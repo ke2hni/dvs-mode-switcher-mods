@@ -25,6 +25,7 @@ tests
 !tests/test-firewall.js
 !tests/test-durable-backup.js
 !tests/test-restore.js
+!tests/test-release.js
 
 bin/
 bin/*
