@@ -18,6 +18,8 @@ assert.match(restore, /restore_item "\$snapshot" application "\$APP_DIR"/);
 assert.match(restore, /restore_item "\$snapshot" live-MMDVM_Bridge\.ini "\$LIVE_INI"/);
 assert.match(restore, /restore_item "\$snapshot" live-Analog_Bridge\.ini "\$ANALOG_INI"/);
 assert.match(restore, /restore_item "\$snapshot" presets "\$PRESET_DIR"/);
+assert.match(restore, /mkdir -p -- "\$\(dirname -- "\$destination"\)"/);
+assert.match(restore, /if \[\[ -e "\$snapshot\/presets\.absent" \]\]; then rmdir -- "\$CONFIG_DIR"/);
 assert.match(restore, /apply_firewall_state "\$snapshot"/);
 assert.match(restore, /Restore failed; attempting to recover the pre-restore working state/);
 assert.match(restore, /apply_snapshot "\$SAFETY" 1/);

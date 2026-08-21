@@ -2,6 +2,12 @@
 
 All notable public releases of this DVS Mode Switcher fork are recorded here.
 
+## 1.1.0-rc11 - 2026-08-21
+
+- Remove the empty `/etc/dvswitch-mode-switcher` parent when restoring a snapshot that records protected presets as absent.
+- Recreate missing destination parents safely when restoring snapshots that contain presets or other managed paths.
+- Added regression coverage preventing empty DVS Mode Switcher configuration-directory remnants after restore.
+
 ## 1.1.0-rc10 - 2026-08-21
 
 - Corrected firewall-state capture so an intentionally missing TCP 3000 rule is recorded as `no` instead of aborting installation under `set -e`.
