@@ -22,10 +22,10 @@ This installer installs DVSwitch Mode Switcher. It does not install the underlyi
 Log into the DVSwitch server and run this single command:
 
 ```bash
-install_dir=$(mktemp -d /tmp/dvs-mode-switcher-install.XXXXXX) && git clone https://github.com/ke2hni/dvs-mode-switcher-mods.git "$install_dir" && cd "$install_dir" && sudo bash ./install-dvswitch-mode-switcher.sh
+cd /home/asl && git clone https://github.com/ke2hni/dvs-mode-switcher-mods.git && cd dvs-mode-switcher-mods && sudo ./install-dvswitch-mode-switcher.sh
 ```
 
-The normal command automatically selects a first installation or an upgrade. To deliberately discard previous Mode Switcher settings and presets, add `--clean` to the end of the command.
+The installer detects that this is the first Mode Switcher installation and guides you through the required information.
 
 ## Installation modes
 
@@ -93,15 +93,25 @@ sudo journalctl -u dvswitch_mode_switcher.service -n 50 --no-pager
 
 ## Updating
 
-Download the current repository and run the installer without `--clean`:
+Run this single command from the DVSwitch server:
 
 ```bash
-update_dir=$(mktemp -d /tmp/dvs-mode-switcher-update.XXXXXX) && git clone https://github.com/ke2hni/dvs-mode-switcher-mods.git "$update_dir" && cd "$update_dir" && sudo bash ./install-dvswitch-mode-switcher.sh
+cd /home/asl/dvs-mode-switcher-mods && git pull --ff-only && sudo ./install-dvswitch-mode-switcher.sh
 ```
 
 Normal updates may reuse protected BM/TGIF presets already installed on the system. `--clean` deliberately ignores those old Mode Switcher presets and rebuilds them from the live DVSwitch configuration.
 
 During an upgrade, the installer asks whether the DMR section in the active favorites file belongs to `bm` or `tgif`. It assigns that DMR list only to the selected network. Existing STFU, YSF, P25, D-STAR, NXDN and any other non-DMR mode lists are copied to both network presets. A customized DMR list already saved for the other network is retained when available.
+
+## Clean reinstall
+
+A clean reinstall deliberately replaces previous Mode Switcher settings and favorites with freshly generated network presets and the repository defaults. Run:
+
+```bash
+cd /home/asl/dvs-mode-switcher-mods && git pull --ff-only && sudo ./install-dvswitch-mode-switcher.sh --clean
+```
+
+The installer still reads the existing working DVSwitch configuration and asks for any missing network credentials. It does not remove or reinstall the underlying DVSwitch packages.
 
 ## Installed files
 

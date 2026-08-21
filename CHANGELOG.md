@@ -2,6 +2,12 @@
 
 All notable public releases of this DVSwitch Mode Switcher fork are recorded here.
 
+## 1.1.0-rc4 - 2026-08-20
+
+- Simplified first-install, update and clean-reinstall instructions to one copy-and-paste command each.
+- Use the normal `/home/asl/dvs-mode-switcher-mods` checkout instead of executing from a `noexec` `/tmp` filesystem.
+- Corrected installer help and non-root guidance so `--clean` is shown only when deliberately requested.
+
 ## 1.1.0-rc3 - 2026-08-20
 
 - Keep protected credential-bearing MMDVM presets at `root:root 0600`.

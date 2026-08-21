@@ -26,7 +26,7 @@ TMP_DIR=
 
 log() { printf '\n[%s] %s\n' "$(date +%H:%M:%S)" "$*"; }
 die() { printf '\nERROR: %s\n' "$*" >&2; exit 1; }
-usage() { printf 'Usage: sudo %s [--clean]\n' "${0##*/}"; printf '  --clean  Install a fresh production copy of DVSwitch Mode Switcher.\n'; }
+usage() { printf 'Usage: sudo ./%s [--clean]\n' "${0##*/}"; printf '  No option  Automatically perform a first installation or safe upgrade.\n'; printf '  --clean    Replace previous Mode Switcher settings with a fresh production copy.\n'; }
 
 case "${1:-}" in
     --clean) CLEAN=1 ;;
@@ -35,7 +35,7 @@ case "${1:-}" in
     *) usage >&2; die "Unknown option: $1" ;;
 esac
 
-[[ ${EUID} -eq 0 ]] || die "Run with sudo: sudo ./${0##*/} --clean"
+[[ ${EUID} -eq 0 ]] || die "Run with sudo: sudo ./${0##*/}"
 [[ -r "$LIVE_INI" ]] || die "DVSwitch is not configured: $LIVE_INI is missing or unreadable."
 [[ -x "$DVSWITCH_SH" ]] || die "DVSwitch control script is missing: $DVSWITCH_SH"
 getent passwd asl >/dev/null || die "Required ASL user 'asl' does not exist."
