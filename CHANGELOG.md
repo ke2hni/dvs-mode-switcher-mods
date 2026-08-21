@@ -1,6 +1,14 @@
 # Changelog
 
-All notable public releases of this DVSwitch Mode Switcher fork are recorded here.
+All notable public releases of this DVS Mode Switcher fork are recorded here.
+
+## 1.1.0-rc8 - 2026-08-21
+
+- Store a complete, permanent pre-install snapshot for first, upgrade and clean installations.
+- Preserve the previous production application inside the timestamped backup directory, or record that it was previously absent.
+- Record the prior installation mode and service active/enabled state in a root-only backup manifest.
+- Keep successful-installation backups indefinitely for future recovery.
+- Added a durable-backup regression test.
 
 ## 1.1.0-rc6 - 2026-08-20
 

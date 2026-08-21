@@ -1,10 +1,10 @@
 <div align="center">
 
-# 📻 DVS Mode Switcher Enhanced
+# 📻 DVS Mode Switcher
 
 ### A simple web interface for DVSwitch mode, talkgroup and DMR-network control
 
-[![Version](https://img.shields.io/badge/version-1.1.0--rc7-2563eb?style=for-the-badge)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.1.0--rc8-2563eb?style=for-the-badge)](CHANGELOG.md)
 [![Platform](https://img.shields.io/badge/platform-ASL%203%20%7C%20Debian-0f766e?style=for-the-badge)](#-requirements)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](#-requirements)
 [![License](https://img.shields.io/badge/license-LGPL--3.0-blue?style=for-the-badge)](LICENSE)
@@ -238,11 +238,15 @@ Switching networks applies the corresponding favorites file.
 
 ## ♻️ Backup and rollback
 
-The installer reports its timestamped backup directory under:
+Before replacing anything, the installer creates a permanent, timestamped snapshot under:
 
 ```text
 /var/backups/dvswitch-mode-switcher/
 ```
+
+Each installation snapshot contains the complete previous production application, or an explicit marker showing that no application was installed. It also contains the previous live MMDVM and Analog_Bridge INI files, active favorites, protected presets, helper, systemd unit, sudo policy, and a manifest recording the installation mode and previous service state.
+
+Backups remain after a successful installation and are not automatically deleted or rotated. They are owned by root and stored with mode `0700` because the saved MMDVM configuration can contain network credentials.
 
 If installation verification fails, it automatically attempts to restore the previous production application, affected configuration files, system integration and any firewall rule changed by that installation.
 

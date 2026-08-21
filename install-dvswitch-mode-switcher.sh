@@ -27,6 +27,8 @@ TMP_DIR=
 FIREWALL_BACKEND=none
 FIREWALL_ZONE=
 FIREWALL_RULE_ADDED=0
+PREVIOUS_SERVICE_ACTIVE=unknown
+PREVIOUS_SERVICE_ENABLED=unknown
 
 log() { printf '\n[%s] %s\n' "$(date +%H:%M:%S)" "$*"; }
 die() { printf '\nERROR: %s\n' "$*" >&2; exit 1; }
@@ -386,11 +388,25 @@ chmod 0755 "$STAGE/configs"; chmod 0644 "$STAGE/configs/config.yml" "$STAGE/conf
 
 log "Backing up the current production installation"
 install -d -o root -g root -m 0700 "$BACKUP_ROOT"
+save_or_mark_absent "$APP_DIR" application
 save_or_mark_absent "$HELPER" helper; save_or_mark_absent "$UNIT_FILE" unit; save_or_mark_absent "$SUDOERS_FILE" sudoers
 cp -a "$LIVE_INI" "$BACKUP_ROOT/live-MMDVM_Bridge.ini"
 cp -a "$ANALOG_INI" "$BACKUP_ROOT/live-Analog_Bridge.ini"
 [[ ! -f "$APP_DIR/configs/tg_alias.yml" ]] || cp -a "$APP_DIR/configs/tg_alias.yml" "$BACKUP_ROOT/active-tg_alias.yml"
 if [[ -d "$PRESET_DIR" ]]; then cp -a "$PRESET_DIR" "$BACKUP_ROOT/presets"; else : >"$BACKUP_ROOT/presets.absent"; fi
+PREVIOUS_SERVICE_ACTIVE="$(systemctl is-active "$SERVICE" 2>/dev/null || true)"; [[ -n "$PREVIOUS_SERVICE_ACTIVE" ]] || PREVIOUS_SERVICE_ACTIVE=unknown
+PREVIOUS_SERVICE_ENABLED="$(systemctl is-enabled "$SERVICE" 2>/dev/null || true)"; [[ -n "$PREVIOUS_SERVICE_ENABLED" ]] || PREVIOUS_SERVICE_ENABLED=unknown
+cat >"$BACKUP_ROOT/manifest" <<EOF
+backup_format=1
+created=$STAMP
+install_mode=$INSTALL_MODE
+application=$([[ -e "$BACKUP_ROOT/application" ]] && printf present || printf absent)
+service_active=$PREVIOUS_SERVICE_ACTIVE
+service_enabled=$PREVIOUS_SERVICE_ENABLED
+live_ini=$LIVE_INI
+analog_ini=$ANALOG_INI
+EOF
+chmod 0600 "$BACKUP_ROOT/manifest"
 systemctl stop "$SERVICE" >/dev/null 2>&1 || true
 if [[ -e "$APP_DIR" ]]; then OLD_APP="${APP_DIR}.before-${INSTALL_MODE}-$STAMP"; mv "$APP_DIR" "$OLD_APP"; fi
 mv "$STAGE" "$APP_DIR"; STAGE=; SWAPPED=1

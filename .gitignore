@@ -23,6 +23,7 @@ tests
 !tests/test-helper-permissions.js
 !tests/test-id-consistency.js
 !tests/test-firewall.js
+!tests/test-durable-backup.js
 
 bin/
 bin/*
