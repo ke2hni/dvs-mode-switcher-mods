@@ -22,10 +22,10 @@ This installer installs DVSwitch Mode Switcher. It does not install the underlyi
 Log into the DVSwitch server and run this single command:
 
 ```bash
-cd /home/asl && git clone https://github.com/ke2hni/dvs-mode-switcher-mods.git && cd dvs-mode-switcher-mods && sudo ./install-dvswitch-mode-switcher.sh
+install_dir=$(mktemp -d /tmp/dvs-mode-switcher-install.XXXXXX) && git clone https://github.com/ke2hni/dvs-mode-switcher-mods.git "$install_dir" && cd "$install_dir" && sudo bash ./install-dvswitch-mode-switcher.sh
 ```
 
-The installer detects that this is the first Mode Switcher installation and guides you through the required information.
+The normal command automatically selects a first installation or an upgrade. To deliberately discard previous Mode Switcher settings and presets, add `--clean` to the end of the command.
 
 ## Installation modes
 
@@ -40,20 +40,15 @@ All three modes require an existing working DVSwitch installation. “First” m
 The installer will:
 
 1. Confirm that DVSwitch is already installed and configured.
-2. Read the existing callsign, DMR ID, NXDN ID and DMR network information from `MMDVM_Bridge.ini` and the DMR ID/SSID information from `Analog_Bridge.ini`.
-3. Ask only for information that is missing, invalid or still uses a placeholder.
+2. Read the existing callsign, DMR ID, NXDN ID and DMR network information from `MMDVM_Bridge.ini`.
+3. Ask only for information that is missing or still uses a placeholder.
 4. Request any unavailable BM or TGIF network password using hidden input.
 5. Ask which DMR network should be active initially.
 6. Display a password-free installation summary and request confirmation.
 7. Detect a clean, first-install or upgrade operation and back up existing files.
 8. Install the enhanced application and restricted system integration.
 9. Generate protected BM and TGIF presets from the existing working MMDVM configuration.
-10. Activate the selected network and start the production service.
-11. Preserve or add the TCP port 3000 firewall allowance when firewalld or UFW is active, then verify the web interface, favorites and bridge services.
-
-The base DMR/CCS7 ID is always seven digits. Analog_Bridge uses that same value for `gatewayDmrId` and uses the seven-digit ID plus a two-digit SSID for its nine-digit `repeaterID`. The installer preserves a valid existing SSID and synchronizes these fields when the base ID must be corrected.
-
-When firewalld or UFW is active, the installer checks TCP port 3000 automatically. An existing allowance is preserved; a missing allowance is added and verified. No firewall knowledge or separate firewall command is required from the user.
+10. Activate the selected network and verify the web interface, favorites and bridge services.
 
 When prompted for passwords, enter the network connection credentials—not the website login passwords:
 
@@ -98,25 +93,15 @@ sudo journalctl -u dvswitch_mode_switcher.service -n 50 --no-pager
 
 ## Updating
 
-Run this single command from the DVSwitch server:
+Download the current repository and run the installer without `--clean`:
 
 ```bash
-cd /home/asl/dvs-mode-switcher-mods && git pull --ff-only && sudo ./install-dvswitch-mode-switcher.sh
+update_dir=$(mktemp -d /tmp/dvs-mode-switcher-update.XXXXXX) && git clone https://github.com/ke2hni/dvs-mode-switcher-mods.git "$update_dir" && cd "$update_dir" && sudo bash ./install-dvswitch-mode-switcher.sh
 ```
 
 Normal updates may reuse protected BM/TGIF presets already installed on the system. `--clean` deliberately ignores those old Mode Switcher presets and rebuilds them from the live DVSwitch configuration.
 
 During an upgrade, the installer asks whether the DMR section in the active favorites file belongs to `bm` or `tgif`. It assigns that DMR list only to the selected network. Existing STFU, YSF, P25, D-STAR, NXDN and any other non-DMR mode lists are copied to both network presets. A customized DMR list already saved for the other network is retained when available.
-
-## Clean reinstall
-
-A clean reinstall deliberately replaces previous Mode Switcher settings and favorites with freshly generated network presets and the repository defaults. Run:
-
-```bash
-cd /home/asl/dvs-mode-switcher-mods && git pull --ff-only && sudo ./install-dvswitch-mode-switcher.sh --clean
-```
-
-The installer still reads the existing working DVSwitch configuration and asks for any missing network credentials. It does not remove or reinstall the underlying DVSwitch packages.
 
 ## Installed files
 
@@ -140,9 +125,9 @@ No credential-bearing MMDVM INI files are stored in this repository. The install
 - `Address`
 - `Password`
 
-It verifies that the generated BM and TGIF presets are otherwise identical. The protected presets are owned by `root:root` with mode `0600`. The selected live `MMDVM_Bridge.ini` is installed as `root:www-data` with mode `0640`, allowing the DVSwitch Dashboard to read it without making the network credentials world-readable.
+It verifies that the generated BM and TGIF presets are otherwise identical. The installed presets are owned by `root:root` with mode `0600`.
 
-Selecting TGIF or BrandMeister from the page installs the corresponding MMDVM preset and favorites together, restarts Analog_Bridge and MMDVM_Bridge, returns DVSwitch to DMR mode, and verifies service health and dashboard access. If switching fails, both configuration files are rolled back.
+Selecting TGIF or BrandMeister from the page installs the corresponding MMDVM preset and favorites together, restarts Analog_Bridge and MMDVM_Bridge, returns DVSwitch to DMR mode, and verifies service health. If switching fails, both configuration files are rolled back.
 
 ## DMR favorites
 
