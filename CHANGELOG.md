@@ -2,6 +2,14 @@
 
 All notable public releases of this DVS Mode Switcher fork are recorded here.
 
+## 1.1.0-rc10 - 2026-08-21
+
+- Corrected firewall-state capture so an intentionally missing TCP 3000 rule is recorded as `no` instead of aborting installation under `set -e`.
+- Applied the same missing-rule correction to pre-restore safety snapshots.
+- Remove incomplete timestamped backup directories when installation fails before the backup manifest is completed.
+- Avoid harmless firewalld `ALREADY_ENABLED` warnings by querying recorded rules before adding them during restore or automatic recovery.
+- Added regression coverage for missing-firewall handling and incomplete-backup cleanup.
+
 ## 1.1.0-rc9 - 2026-08-21
 
 - Added interactive and explicitly targeted permanent-backup restoration through `--restore`.

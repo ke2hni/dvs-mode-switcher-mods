@@ -31,6 +31,7 @@ capture_firewall() {
         FW_BACKEND=ufw
         if ufw status | grep -Eq '^3000/tcp[[:space:]]+ALLOW'; then FW_RUNTIME=yes; FW_PERMANENT=yes; fi
     fi
+    return 0
 }
 
 make_safety_snapshot() {
@@ -74,8 +75,8 @@ apply_firewall_state() {
         firewalld)
             command -v firewall-cmd >/dev/null && firewall-cmd --state >/dev/null 2>&1 || return 1
             [[ -n "$zone" ]] || return 1
-            if [[ "$permanent" == yes ]]; then firewall-cmd --permanent --zone="$zone" --add-port=3000/tcp >/dev/null; else firewall-cmd --permanent --zone="$zone" --remove-port=3000/tcp >/dev/null 2>&1 || true; fi
-            if [[ "$runtime" == yes ]]; then firewall-cmd --zone="$zone" --add-port=3000/tcp >/dev/null; else firewall-cmd --zone="$zone" --remove-port=3000/tcp >/dev/null 2>&1 || true; fi
+            if [[ "$permanent" == yes ]]; then firewall-cmd --permanent --zone="$zone" --query-port=3000/tcp >/dev/null 2>&1 || firewall-cmd --permanent --zone="$zone" --add-port=3000/tcp >/dev/null; else firewall-cmd --permanent --zone="$zone" --remove-port=3000/tcp >/dev/null 2>&1 || true; fi
+            if [[ "$runtime" == yes ]]; then firewall-cmd --zone="$zone" --query-port=3000/tcp >/dev/null 2>&1 || firewall-cmd --zone="$zone" --add-port=3000/tcp >/dev/null; else firewall-cmd --zone="$zone" --remove-port=3000/tcp >/dev/null 2>&1 || true; fi
             [[ "$permanent" == "$(firewall-cmd --permanent --zone="$zone" --query-port=3000/tcp >/dev/null 2>&1 && printf yes || printf no)" ]]
             [[ "$runtime" == "$(firewall-cmd --zone="$zone" --query-port=3000/tcp >/dev/null 2>&1 && printf yes || printf no)" ]]
             ;;

@@ -21,6 +21,7 @@ INSTALL_MODE=
 EXISTING_FAVORITES_NETWORK=
 SWAPPED=0
 INSTALL_COMPLETE=0
+BACKUP_COMPLETE=0
 OLD_APP=
 STAGE=
 TMP_DIR=
@@ -99,6 +100,7 @@ rollback() {
         systemctl daemon-reload >/dev/null 2>&1 || true
         systemctl enable --now "$SERVICE" >/dev/null 2>&1 || true
     fi
+    if (( BACKUP_COMPLETE == 0 )) && [[ "$BACKUP_ROOT" == /var/backups/dvswitch-mode-switcher/install-* && -d "$BACKUP_ROOT" ]]; then rm -rf -- "$BACKUP_ROOT"; fi
     cleanup
     printf '\nInstallation failed. Previous production files were restored where available.\n' >&2
     exit "$rc"
@@ -197,6 +199,7 @@ capture_firewall_state() {
         PREVIOUS_FIREWALL_BACKEND=ufw
         if ufw status | grep -Eq '^3000/tcp[[:space:]]+ALLOW'; then PREVIOUS_FIREWALL_RUNTIME=yes; PREVIOUS_FIREWALL_PERMANENT=yes; fi
     fi
+    return 0
 }
 
 ensure_firewall_port() {
@@ -432,6 +435,7 @@ firewall_runtime_3000=$PREVIOUS_FIREWALL_RUNTIME
 firewall_permanent_3000=$PREVIOUS_FIREWALL_PERMANENT
 EOF
 chmod 0600 "$BACKUP_ROOT/manifest"
+BACKUP_COMPLETE=1
 systemctl stop "$SERVICE" >/dev/null 2>&1 || true
 if [[ -e "$APP_DIR" ]]; then OLD_APP="${APP_DIR}.before-${INSTALL_MODE}-$STAMP"; mv "$APP_DIR" "$OLD_APP"; fi
 mv "$STAGE" "$APP_DIR"; STAGE=; SWAPPED=1

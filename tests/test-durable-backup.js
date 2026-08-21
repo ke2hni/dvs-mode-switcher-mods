@@ -19,6 +19,7 @@ assert.match(installer, /\$BACKUP_ROOT\/manifest/);
 assert.match(installer, /service_active=\$PREVIOUS_SERVICE_ACTIVE/);
 assert.match(installer, /service_enabled=\$PREVIOUS_SERVICE_ENABLED/);
 assert.match(installer, /chmod 0600 "\$BACKUP_ROOT\/manifest"/);
-assert.doesNotMatch(installer, /rm -rf -- "\$BACKUP_ROOT"/);
+assert.match(installer, /BACKUP_COMPLETE=1/);
+assert.match(installer, /if \(\( BACKUP_COMPLETE == 0 \)\)[\s\S]*?rm -rf -- "\$BACKUP_ROOT"/);
 
 process.stdout.write('Durable pre-install backup regression test passed.\n');
