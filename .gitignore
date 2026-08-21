@@ -8,8 +8,8 @@ configs/*
 !configs/tg_alias.example.yml
 
 # DB
-db/*
-!db/.gitkeep
+# db/*
+# !db/.gitkeep
 
 .idea
 .idea/*
@@ -27,9 +27,9 @@ tests
 !tests/test-restore.js
 !tests/test-release.js
 
-bin/
-bin/*
-bin/**
+# bin/
+# bin/*
+# bin/**
 
 # Dependency directories
 node_modules/
