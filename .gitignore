@@ -5,11 +5,7 @@ configs/*
 !configs/config.example.yml
 
 # Alias
-!configs/tg_alias.example.yml
 
-# DB
-# db/*
-# !db/.gitkeep
 
 .idea
 .idea/*
@@ -26,10 +22,6 @@ tests
 !tests/test-durable-backup.js
 !tests/test-restore.js
 !tests/test-release.js
-
-# bin/
-# bin/*
-# bin/**
 
 # Dependency directories
 node_modules/

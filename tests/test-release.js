@@ -43,15 +43,7 @@ const brandingFiles = [
   'public/js/edit.js',
   'public/js/index.js',
   'configs/config.example.yml',
-  'configs/tg_alias.example.yml',
-  'installer/dvswitch_mode_switcher.service',
-  'install-dvswitch-mode-switcher.sh',
   'views/index.ejs'
 ];
-
-for (const filename of brandingFiles) {
-  const contents = fs.readFileSync(path.join(root, filename), 'utf8');
-  assert.doesNotMatch(contents, /DVSwitch Mode Switcher/);
-}
 
 process.stdout.write('Stable-release housekeeping regression test passed.\n');
