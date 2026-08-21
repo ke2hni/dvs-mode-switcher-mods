@@ -29,13 +29,18 @@ FIREWALL_ZONE=
 FIREWALL_RULE_ADDED=0
 PREVIOUS_SERVICE_ACTIVE=unknown
 PREVIOUS_SERVICE_ENABLED=unknown
+PREVIOUS_FIREWALL_BACKEND=none
+PREVIOUS_FIREWALL_ZONE=
+PREVIOUS_FIREWALL_RUNTIME=no
+PREVIOUS_FIREWALL_PERMANENT=no
 
 log() { printf '\n[%s] %s\n' "$(date +%H:%M:%S)" "$*"; }
 die() { printf '\nERROR: %s\n' "$*" >&2; exit 1; }
-usage() { printf 'Usage: sudo ./%s [--clean]\n' "${0##*/}"; printf '  No option  Automatically perform a first installation or safe upgrade.\n'; printf '  --clean    Replace previous Mode Switcher settings with a fresh production copy.\n'; }
+usage() { printf 'Usage: sudo ./%s [--clean | --restore [install-TIMESTAMP]]\n' "${0##*/}"; printf '  No option  Automatically perform a first installation or safe upgrade.\n'; printf '  --clean    Replace previous Mode Switcher settings with a fresh production copy.\n'; printf '  --restore  Interactively select, or explicitly name, a permanent backup to restore.\n'; }
 
 case "${1:-}" in
     --clean) CLEAN=1 ;;
+    --restore) [[ $# -le 2 ]] || { usage >&2; exit 1; }; exec bash "$SCRIPT_DIR/installer/restore-backup" "${2:-}" ;;
     "") ;;
     -h|--help) usage; exit 0 ;;
     *) usage >&2; die "Unknown option: $1" ;;
@@ -179,6 +184,20 @@ normalized_ini() {
 }
 
 save_or_mark_absent() { local source="$1" backup_name="$2"; if [[ -e "$source" ]]; then cp -a "$source" "$BACKUP_ROOT/$backup_name"; else : >"$BACKUP_ROOT/$backup_name.absent"; fi; }
+
+capture_firewall_state() {
+    PREVIOUS_FIREWALL_BACKEND=none; PREVIOUS_FIREWALL_ZONE=; PREVIOUS_FIREWALL_RUNTIME=no; PREVIOUS_FIREWALL_PERMANENT=no
+    if command -v firewall-cmd >/dev/null && firewall-cmd --state >/dev/null 2>&1; then
+        PREVIOUS_FIREWALL_BACKEND=firewalld
+        PREVIOUS_FIREWALL_ZONE="$(firewall-cmd --get-active-zones | awk '$1 != "interfaces:" && $1 != "sources:" { print $1; exit }')"
+        [[ -n "$PREVIOUS_FIREWALL_ZONE" ]] || PREVIOUS_FIREWALL_ZONE="$(firewall-cmd --get-default-zone)"
+        firewall-cmd --zone="$PREVIOUS_FIREWALL_ZONE" --query-port=3000/tcp >/dev/null 2>&1 && PREVIOUS_FIREWALL_RUNTIME=yes
+        firewall-cmd --permanent --zone="$PREVIOUS_FIREWALL_ZONE" --query-port=3000/tcp >/dev/null 2>&1 && PREVIOUS_FIREWALL_PERMANENT=yes
+    elif command -v ufw >/dev/null && ufw status | head -n 1 | grep -q '^Status: active'; then
+        PREVIOUS_FIREWALL_BACKEND=ufw
+        if ufw status | grep -Eq '^3000/tcp[[:space:]]+ALLOW'; then PREVIOUS_FIREWALL_RUNTIME=yes; PREVIOUS_FIREWALL_PERMANENT=yes; fi
+    fi
+}
 
 ensure_firewall_port() {
     if command -v firewall-cmd >/dev/null && firewall-cmd --state >/dev/null 2>&1; then
@@ -345,7 +364,7 @@ apt-get update
 apt-get install -y --no-install-recommends git nodejs npm ca-certificates curl sudo
 NODE_MAJOR="$(node -p 'Number(process.versions.node.split(".")[0])')"; (( NODE_MAJOR >= 18 )) || die "Node.js 18 or newer is required."
 
-log "Preparing the enhanced production application"
+log "Preparing the DVS Mode Switcher production application"
 STAGE="/opt/.dvswitch-mode-switcher-stage-$STAMP"
 if [[ -d "$SCRIPT_DIR/modules" && -f "$SCRIPT_DIR/package.json" && -d "$SCRIPT_DIR/installer" ]]; then
     if [[ -d "$SCRIPT_DIR/.git" ]]; then git clone --no-local "$SCRIPT_DIR" "$STAGE"; else mkdir -p "$STAGE"; cp -a "$SCRIPT_DIR/." "$STAGE/"; fi
@@ -357,6 +376,7 @@ fi
 [[ -f "$STAGE/installer/dvswitch_mode_switcher.service" ]] || die "Repository is missing the production service."
 [[ -f "$STAGE/installer/dvswitch-mode-switcher.sudoers" ]] || die "Repository is missing the sudo policy."
 [[ -f "$STAGE/installer/merge-favorites.js" ]] || die "Repository is missing the favorites migration tool."
+[[ -f "$STAGE/installer/restore-backup" ]] || die "Repository is missing the restore tool."
 [[ -f "$STAGE/presets/tg_alias.BM.yml" && -f "$STAGE/presets/tg_alias.TGIF.yml" ]] || die "Repository is missing favorites."
 (cd "$STAGE" && npm ci --omit=dev)
 
@@ -382,12 +402,13 @@ case "$INITIAL_NETWORK" in bm) install -m 0644 "$STAGE/presets/tg_alias.BM.yml" 
 chown -R root:root "$STAGE"
 find "$STAGE" -type d -exec chmod 0755 {} +
 find "$STAGE" -type f -exec chmod 0644 {} +
-chmod 0755 "$STAGE/install-dvswitch-mode-switcher.sh" "$STAGE/installer/dvswitch-dmr-network"
+chmod 0755 "$STAGE/install-dvswitch-mode-switcher.sh" "$STAGE/installer/dvswitch-dmr-network" "$STAGE/installer/restore-backup"
 chown asl:asl "$STAGE/configs" "$STAGE/configs/config.yml" "$STAGE/configs/tg_alias.yml"
 chmod 0755 "$STAGE/configs"; chmod 0644 "$STAGE/configs/config.yml" "$STAGE/configs/tg_alias.yml"
 
 log "Backing up the current production installation"
 install -d -o root -g root -m 0700 "$BACKUP_ROOT"
+capture_firewall_state
 save_or_mark_absent "$APP_DIR" application
 save_or_mark_absent "$HELPER" helper; save_or_mark_absent "$UNIT_FILE" unit; save_or_mark_absent "$SUDOERS_FILE" sudoers
 cp -a "$LIVE_INI" "$BACKUP_ROOT/live-MMDVM_Bridge.ini"
@@ -405,6 +426,10 @@ service_active=$PREVIOUS_SERVICE_ACTIVE
 service_enabled=$PREVIOUS_SERVICE_ENABLED
 live_ini=$LIVE_INI
 analog_ini=$ANALOG_INI
+firewall_backend=$PREVIOUS_FIREWALL_BACKEND
+firewall_zone=$PREVIOUS_FIREWALL_ZONE
+firewall_runtime_3000=$PREVIOUS_FIREWALL_RUNTIME
+firewall_permanent_3000=$PREVIOUS_FIREWALL_PERMANENT
 EOF
 chmod 0600 "$BACKUP_ROOT/manifest"
 systemctl stop "$SERVICE" >/dev/null 2>&1 || true
@@ -448,7 +473,7 @@ sleep 8
 
 INSTALL_COMPLETE=1; trap - ERR
 IP_ADDR="$(hostname -I 2>/dev/null | awk '{print $1}')"
-printf '\nDVSwitch Mode Switcher installation complete.\n'
+printf '\nDVS Mode Switcher installation complete.\n'
 printf '  Version: %s\n' "$(node -p "require('$APP_DIR/package.json').version")"
 printf '  Production: http://%s:3000\n' "${IP_ADDR:-NODE-IP}"
 printf '  Service: %s (active, PID %s, zero restarts)\n' "$SERVICE" "$MAIN_PID"

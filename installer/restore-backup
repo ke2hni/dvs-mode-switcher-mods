@@ -1,0 +1,195 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+APP_DIR=/opt/dvswitch_mode_switcher
+LIVE_INI=/opt/MMDVM_Bridge/MMDVM_Bridge.ini
+ANALOG_INI=/opt/Analog_Bridge/Analog_Bridge.ini
+PRESET_DIR=/etc/dvswitch-mode-switcher/presets
+HELPER=/usr/local/sbin/dvswitch-dmr-network-prod
+SERVICE=dvswitch_mode_switcher.service
+UNIT_FILE=/etc/systemd/system/dvswitch_mode_switcher.service
+SUDOERS_FILE=/etc/sudoers.d/dvswitch-mode-switcher
+BACKUP_BASE=/var/backups/dvswitch-mode-switcher
+STAMP="$(date +%Y%m%d-%H%M%S)"
+SAFETY=
+RESTORE_STARTED=0
+
+log() { printf '\n[%s] %s\n' "$(date +%H:%M:%S)" "$*"; }
+die() { printf '\nERROR: %s\n' "$*" >&2; exit 1; }
+manifest_value() { awk -F= -v key="$2" '$1 == key { print substr($0, index($0, "=") + 1); exit }' "$1/manifest"; }
+save_or_mark_absent() { local source="$1" destination="$2"; if [[ -e "$source" ]]; then cp -a "$source" "$destination"; else : >"$destination.absent"; fi; }
+
+capture_firewall() {
+    FW_BACKEND=none; FW_ZONE=; FW_RUNTIME=no; FW_PERMANENT=no
+    if command -v firewall-cmd >/dev/null && firewall-cmd --state >/dev/null 2>&1; then
+        FW_BACKEND=firewalld
+        FW_ZONE="$(firewall-cmd --get-active-zones | awk '$1 != "interfaces:" && $1 != "sources:" { print $1; exit }')"
+        [[ -n "$FW_ZONE" ]] || FW_ZONE="$(firewall-cmd --get-default-zone)"
+        firewall-cmd --zone="$FW_ZONE" --query-port=3000/tcp >/dev/null 2>&1 && FW_RUNTIME=yes
+        firewall-cmd --permanent --zone="$FW_ZONE" --query-port=3000/tcp >/dev/null 2>&1 && FW_PERMANENT=yes
+    elif command -v ufw >/dev/null && ufw status | head -n 1 | grep -q '^Status: active'; then
+        FW_BACKEND=ufw
+        if ufw status | grep -Eq '^3000/tcp[[:space:]]+ALLOW'; then FW_RUNTIME=yes; FW_PERMANENT=yes; fi
+    fi
+}
+
+make_safety_snapshot() {
+    SAFETY="$BACKUP_BASE/restore-safety-$STAMP"
+    [[ ! -e "$SAFETY" ]] || die "Safety snapshot already exists: $SAFETY"
+    install -d -o root -g root -m 0700 "$SAFETY"
+    save_or_mark_absent "$APP_DIR" "$SAFETY/application"
+    save_or_mark_absent "$HELPER" "$SAFETY/helper"
+    save_or_mark_absent "$UNIT_FILE" "$SAFETY/unit"
+    save_or_mark_absent "$SUDOERS_FILE" "$SAFETY/sudoers"
+    save_or_mark_absent "$LIVE_INI" "$SAFETY/live-MMDVM_Bridge.ini"
+    save_or_mark_absent "$ANALOG_INI" "$SAFETY/live-Analog_Bridge.ini"
+    if [[ -f "$APP_DIR/configs/tg_alias.yml" ]]; then cp -a "$APP_DIR/configs/tg_alias.yml" "$SAFETY/active-tg_alias.yml"; else : >"$SAFETY/active-tg_alias.yml.absent"; fi
+    if [[ -d "$PRESET_DIR" ]]; then cp -a "$PRESET_DIR" "$SAFETY/presets"; else : >"$SAFETY/presets.absent"; fi
+    local service_active service_enabled application
+    service_active="$(systemctl is-active "$SERVICE" 2>/dev/null || true)"; [[ -n "$service_active" ]] || service_active=unknown
+    service_enabled="$(systemctl is-enabled "$SERVICE" 2>/dev/null || true)"; [[ -n "$service_enabled" ]] || service_enabled=unknown
+    [[ -d "$SAFETY/application" ]] && application=present || application=absent
+    capture_firewall
+    {
+        printf 'backup_format=2\ncreated=%s\ninstall_mode=restore-safety\n' "$STAMP"
+        printf 'application=%s\nservice_active=%s\nservice_enabled=%s\n' "$application" "$service_active" "$service_enabled"
+        printf 'live_ini=%s\nanalog_ini=%s\n' "$LIVE_INI" "$ANALOG_INI"
+        printf 'firewall_backend=%s\nfirewall_zone=%s\nfirewall_runtime_3000=%s\nfirewall_permanent_3000=%s\n' "$FW_BACKEND" "$FW_ZONE" "$FW_RUNTIME" "$FW_PERMANENT"
+    } >"$SAFETY/manifest"
+    chmod 0600 "$SAFETY/manifest"
+}
+
+restore_item() {
+    local snapshot="$1" name="$2" destination="$3"
+    rm -rf -- "$destination"
+    if [[ -e "$snapshot/$name" ]]; then cp -a "$snapshot/$name" "$destination"; elif [[ ! -e "$snapshot/$name.absent" ]]; then return 1; fi
+}
+
+apply_firewall_state() {
+    local snapshot="$1" backend zone runtime permanent
+    backend="$(manifest_value "$snapshot" firewall_backend || true)"
+    if [[ -z "$backend" ]]; then printf '  Firewall: legacy backup has no recorded state; current TCP 3000 rule preserved\n'; return 0; fi
+    zone="$(manifest_value "$snapshot" firewall_zone || true)"; runtime="$(manifest_value "$snapshot" firewall_runtime_3000 || true)"; permanent="$(manifest_value "$snapshot" firewall_permanent_3000 || true)"
+    case "$backend" in
+        firewalld)
+            command -v firewall-cmd >/dev/null && firewall-cmd --state >/dev/null 2>&1 || return 1
+            [[ -n "$zone" ]] || return 1
+            if [[ "$permanent" == yes ]]; then firewall-cmd --permanent --zone="$zone" --add-port=3000/tcp >/dev/null; else firewall-cmd --permanent --zone="$zone" --remove-port=3000/tcp >/dev/null 2>&1 || true; fi
+            if [[ "$runtime" == yes ]]; then firewall-cmd --zone="$zone" --add-port=3000/tcp >/dev/null; else firewall-cmd --zone="$zone" --remove-port=3000/tcp >/dev/null 2>&1 || true; fi
+            [[ "$permanent" == "$(firewall-cmd --permanent --zone="$zone" --query-port=3000/tcp >/dev/null 2>&1 && printf yes || printf no)" ]]
+            [[ "$runtime" == "$(firewall-cmd --zone="$zone" --query-port=3000/tcp >/dev/null 2>&1 && printf yes || printf no)" ]]
+            ;;
+        ufw)
+            command -v ufw >/dev/null || return 1
+            if [[ "$runtime" == yes || "$permanent" == yes ]]; then ufw allow 3000/tcp comment 'DVS Mode Switcher' >/dev/null; else ufw --force delete allow 3000/tcp >/dev/null 2>&1 || true; fi
+            if [[ "$runtime" == yes || "$permanent" == yes ]]; then ufw status | grep -Eq '^3000/tcp[[:space:]]+ALLOW'; else ! ufw status | grep -Eq '^3000/tcp[[:space:]]+ALLOW'; fi
+            ;;
+        none) ;;
+        *) return 1 ;;
+    esac
+}
+
+apply_snapshot() {
+    local snapshot="$1" verify="${2:-1}" application service_active service_enabled
+    application="$(manifest_value "$snapshot" application)"
+    service_active="$(manifest_value "$snapshot" service_active)"
+    service_enabled="$(manifest_value "$snapshot" service_enabled)"
+    systemctl stop "$SERVICE" >/dev/null 2>&1 || true
+    restore_item "$snapshot" application "$APP_DIR"
+    restore_item "$snapshot" helper "$HELPER"
+    restore_item "$snapshot" unit "$UNIT_FILE"
+    restore_item "$snapshot" sudoers "$SUDOERS_FILE"
+    restore_item "$snapshot" live-MMDVM_Bridge.ini "$LIVE_INI"
+    restore_item "$snapshot" live-Analog_Bridge.ini "$ANALOG_INI"
+    restore_item "$snapshot" presets "$PRESET_DIR"
+    if [[ "$application" == present && -e "$snapshot/active-tg_alias.yml" ]]; then install -o asl -g asl -m 0644 "$snapshot/active-tg_alias.yml" "$APP_DIR/configs/tg_alias.yml"; fi
+    systemctl daemon-reload
+    systemctl restart analog_bridge.service mmdvm_bridge.service
+    apply_firewall_state "$snapshot"
+    if [[ "$application" == present && -f "$UNIT_FILE" ]]; then
+        case "$service_enabled" in enabled) systemctl enable "$SERVICE" >/dev/null ;; disabled) systemctl disable "$SERVICE" >/dev/null 2>&1 || true ;; esac
+        if [[ "$service_active" == active ]]; then systemctl start "$SERVICE"; else systemctl stop "$SERVICE" >/dev/null 2>&1 || true; fi
+    else
+        systemctl disable --now "$SERVICE" >/dev/null 2>&1 || true
+    fi
+    (( verify )) || return 0
+    if [[ "$application" == present ]]; then [[ -d "$APP_DIR" && -f "$APP_DIR/package.json" ]]; else [[ ! -e "$APP_DIR" ]]; fi
+    cmp -s "$snapshot/live-MMDVM_Bridge.ini" "$LIVE_INI"
+    cmp -s "$snapshot/live-Analog_Bridge.ini" "$ANALOG_INI"
+    if [[ -e "$snapshot/helper" ]]; then cmp -s "$snapshot/helper" "$HELPER"; else [[ ! -e "$HELPER" ]]; fi
+    if [[ -e "$snapshot/unit" ]]; then cmp -s "$snapshot/unit" "$UNIT_FILE"; else [[ ! -e "$UNIT_FILE" ]]; fi
+    if [[ -e "$snapshot/sudoers" ]]; then cmp -s "$snapshot/sudoers" "$SUDOERS_FILE"; else [[ ! -e "$SUDOERS_FILE" ]]; fi
+    if [[ -e "$snapshot/active-tg_alias.yml" && "$application" == present ]]; then cmp -s "$snapshot/active-tg_alias.yml" "$APP_DIR/configs/tg_alias.yml"; fi
+    if [[ "$service_active" == active ]]; then
+        systemctl is-active --quiet "$SERVICE"
+        local website_ready=0
+        for _ in {1..10}; do if curl -fsS --max-time 5 http://127.0.0.1:3000/ >/dev/null; then website_ready=1; break; fi; sleep 1; done
+        (( website_ready ))
+        [[ "$(systemctl show -p NRestarts --value "$SERVICE")" == 0 ]]
+    else
+        ! systemctl is-active --quiet "$SERVICE"
+    fi
+    if [[ "$service_enabled" == enabled ]]; then [[ "$(systemctl is-enabled "$SERVICE")" == enabled ]]; fi
+    if [[ "$service_enabled" == disabled ]]; then [[ "$(systemctl is-enabled "$SERVICE")" == disabled ]]; fi
+}
+
+restore_failed() {
+    local rc=$?
+    trap - ERR
+    if (( RESTORE_STARTED )) && [[ -n "$SAFETY" && -d "$SAFETY" ]]; then
+        printf '\nRestore failed; attempting to recover the pre-restore working state.\n' >&2
+        if (trap - ERR; set -Ee; apply_snapshot "$SAFETY" 1); then printf 'Pre-restore working state recovered from %s\n' "$SAFETY" >&2; else printf 'Automatic recovery also failed. Safety snapshot: %s\n' "$SAFETY" >&2; fi
+    fi
+    exit "$rc"
+}
+trap restore_failed ERR
+
+[[ ${EUID} -eq 0 ]] || die "Run restore with sudo."
+command -v systemctl >/dev/null || die "systemd is required."
+[[ -d "$BACKUP_BASE" ]] || die "No DVS Mode Switcher backup directory exists."
+
+TARGET_ARG="${1:-}"
+if [[ -z "$TARGET_ARG" ]]; then
+    mapfile -t BACKUPS < <(find "$BACKUP_BASE" -mindepth 1 -maxdepth 1 -type d -name 'install-*' -printf '%p\n' | sort -r)
+    ((${#BACKUPS[@]})) || die "No permanent installation backups were found."
+    printf '\nAvailable DVS Mode Switcher backups\n'
+    for i in "${!BACKUPS[@]}"; do printf '  %d) %s  mode=%s  application=%s\n' "$((i+1))" "${BACKUPS[$i]##*/}" "$(manifest_value "${BACKUPS[$i]}" install_mode)" "$(manifest_value "${BACKUPS[$i]}" application)"; done
+    read -rp 'Select backup number: ' SELECTION </dev/tty
+    [[ "$SELECTION" =~ ^[0-9]+$ ]] && (( SELECTION >= 1 && SELECTION <= ${#BACKUPS[@]} )) || die "Invalid backup selection."
+    TARGET="${BACKUPS[$((SELECTION-1))]}"
+else
+    [[ "$TARGET_ARG" != */* ]] || die "Name the backup as install-YYYYMMDD-HHMMSS, without a path."
+    TARGET="$BACKUP_BASE/$TARGET_ARG"
+fi
+
+[[ -d "$TARGET" && ! -L "$TARGET" && "${TARGET##*/}" == install-* ]] || die "Invalid installation backup: $TARGET"
+[[ "$(stat -c %U "$TARGET")" == root ]] || die "Backup is not owned by root."
+[[ -f "$TARGET/manifest" && ! -L "$TARGET/manifest" ]] || die "Backup manifest is missing or unsafe."
+[[ "$(manifest_value "$TARGET" backup_format)" =~ ^[12]$ ]] || die "Unsupported backup format."
+[[ -f "$TARGET/live-MMDVM_Bridge.ini" && -f "$TARGET/live-Analog_Bridge.ini" ]] || die "Backup is missing required DVSwitch configuration files."
+TARGET_APPLICATION="$(manifest_value "$TARGET" application)"
+case "$TARGET_APPLICATION" in present) [[ -f "$TARGET/application/package.json" ]] || die "Backup application is incomplete." ;; absent) [[ -f "$TARGET/application.absent" ]] || die "Backup absence marker is missing." ;; *) die "Invalid application state in manifest." ;; esac
+
+printf '\nRestore summary (passwords hidden)\n'
+printf '  Backup: %s\n' "$TARGET"
+printf '  Created: %s\n' "$(manifest_value "$TARGET" created)"
+printf '  Original operation: %s\n' "$(manifest_value "$TARGET" install_mode)"
+printf '  Previous application: %s\n' "$TARGET_APPLICATION"
+printf '  Previous service: %s / %s\n' "$(manifest_value "$TARGET" service_active)" "$(manifest_value "$TARGET" service_enabled)"
+if [[ "$TARGET_APPLICATION" == present ]]; then printf '  Application version: %s\n' "$(node -p "require('$TARGET/application/package.json').version")"; fi
+read -rp 'Restore this backup? [y/N]: ' CONFIRM </dev/tty
+[[ "$CONFIRM" =~ ^[Yy]$ ]] || die "Restore cancelled."
+
+log "Creating a permanent pre-restore safety snapshot"
+make_safety_snapshot
+printf '  Safety snapshot: %s\n' "$SAFETY"
+RESTORE_STARTED=1
+log "Restoring the selected DVS Mode Switcher snapshot"
+apply_snapshot "$TARGET" 1
+RESTORE_STARTED=0
+trap - ERR
+
+printf '\nDVS Mode Switcher restore complete.\n'
+printf '  Restored backup: %s\n' "$TARGET"
+printf '  Safety snapshot retained: %s\n' "$SAFETY"
+if [[ "$TARGET_APPLICATION" == present ]]; then printf '  Restored version: %s\n' "$(node -p "require('$APP_DIR/package.json').version")"; printf '  Service state: %s / %s\n' "$(systemctl is-active "$SERVICE" 2>/dev/null || true)" "$(systemctl is-enabled "$SERVICE" 2>/dev/null || true)"; else printf '  DVS Mode Switcher was not installed at the selected point in time.\n'; fi

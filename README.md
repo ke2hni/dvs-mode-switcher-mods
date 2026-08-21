@@ -4,7 +4,7 @@
 
 ### A simple web interface for DVSwitch mode, talkgroup and DMR-network control
 
-[![Version](https://img.shields.io/badge/version-1.1.0--rc8-2563eb?style=for-the-badge)](CHANGELOG.md)
+[![Version](https://img.shields.io/badge/version-1.1.0--rc9-2563eb?style=for-the-badge)](CHANGELOG.md)
 [![Platform](https://img.shields.io/badge/platform-ASL%203%20%7C%20Debian-0f766e?style=for-the-badge)](#-requirements)
 [![Node.js](https://img.shields.io/badge/Node.js-18%2B-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](#-requirements)
 [![License](https://img.shields.io/badge/license-LGPL--3.0-blue?style=for-the-badge)](LICENSE)
@@ -29,6 +29,7 @@
 | 🪪 ID synchronization | Keeps the seven-digit DMR ID and nine-digit Analog_Bridge repeater ID consistent. |
 | 🧱 Firewall setup | Preserves or adds TCP port 3000 automatically for firewalld or UFW. |
 | 💾 Backup and rollback | Backs up affected files and restores them automatically if installation or network switching fails. |
+| ♻️ Guided restore | Restores a selected permanent snapshot while retaining a safety copy of the current working state. |
 
 ---
 
@@ -251,6 +252,24 @@ Backups remain after a successful installation and are not automatically deleted
 If installation verification fails, it automatically attempts to restore the previous production application, affected configuration files, system integration and any firewall rule changed by that installation.
 
 Network switching also creates timestamped backups of the live MMDVM INI and active favorites before changing them.
+
+### Restore a permanent snapshot
+
+Interactively list and select an installation snapshot:
+
+```bash
+cd /home/asl/dvs-mode-switcher-mods && sudo ./install-dvswitch-mode-switcher.sh --restore
+```
+
+Or restore a specific snapshot by its directory name:
+
+```bash
+cd /home/asl/dvs-mode-switcher-mods && sudo ./install-dvswitch-mode-switcher.sh --restore install-YYYYMMDD-HHMMSS
+```
+
+Before changing the working installation, restore creates and retains a root-only `restore-safety-YYYYMMDD-HHMMSS` snapshot. It then restores the application or prior absence state, live INIs, favorites, protected presets, helper, systemd unit, sudo policy, service enabled/running state and recorded firewall state. If verification fails, it automatically attempts to recover the pre-restore working state from the safety snapshot.
+
+RC8 backups remain restorable. Because RC8 manifests did not record firewall state, restoring an RC8 snapshot deliberately preserves the current TCP 3000 firewall rule.
 
 ---
 

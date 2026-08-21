@@ -24,6 +24,7 @@ tests
 !tests/test-id-consistency.js
 !tests/test-firewall.js
 !tests/test-durable-backup.js
+!tests/test-restore.js
 
 bin/
 bin/*

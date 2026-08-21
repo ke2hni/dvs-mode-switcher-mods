@@ -2,6 +2,17 @@
 
 All notable public releases of this DVS Mode Switcher fork are recorded here.
 
+## 1.1.0-rc9 - 2026-08-21
+
+- Added interactive and explicitly targeted permanent-backup restoration through `--restore`.
+- Create and retain a complete pre-restore safety snapshot before changing the working installation.
+- Restore the previous application or absence state, DVSwitch INIs, favorites, presets, helper, service and sudo integration.
+- Restore recorded service enabled/running state and firewall TCP 3000 state.
+- Automatically recover the pre-restore working state if restore verification fails.
+- Keep RC8 backup compatibility while preserving the current firewall rule when legacy manifests have no recorded firewall state.
+- Corrected remaining installer-output branding to DVS Mode Switcher.
+- Added restore regression testing.
+
 ## 1.1.0-rc8 - 2026-08-21
 
 - Store a complete, permanent pre-install snapshot for first, upgrade and clean installations.
