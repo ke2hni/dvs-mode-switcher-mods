@@ -4,6 +4,7 @@ set -Eeuo pipefail
 # Installs the enhanced web application. It does not remove or reinstall DVSwitch.
 APP_DIR=/opt/dvswitch_mode_switcher
 LIVE_INI=/opt/MMDVM_Bridge/MMDVM_Bridge.ini
+ANALOG_INI=/opt/Analog_Bridge/Analog_Bridge.ini
 DVSWITCH_INI=/opt/MMDVM_Bridge/DVSwitch.ini
 DVSWITCH_SH=/opt/MMDVM_Bridge/dvswitch.sh
 PRESET_DIR=/etc/dvswitch-mode-switcher/presets
@@ -23,6 +24,9 @@ INSTALL_COMPLETE=0
 OLD_APP=
 STAGE=
 TMP_DIR=
+FIREWALL_BACKEND=none
+FIREWALL_ZONE=
+FIREWALL_RULE_ADDED=0
 
 log() { printf '\n[%s] %s\n' "$(date +%H:%M:%S)" "$*"; }
 die() { printf '\nERROR: %s\n' "$*" >&2; exit 1; }
@@ -37,6 +41,7 @@ esac
 
 [[ ${EUID} -eq 0 ]] || die "Run with sudo: sudo ./${0##*/}"
 [[ -r "$LIVE_INI" ]] || die "DVSwitch is not configured: $LIVE_INI is missing or unreadable."
+[[ -r "$ANALOG_INI" ]] || die "DVSwitch is not configured: $ANALOG_INI is missing or unreadable."
 [[ -x "$DVSWITCH_SH" ]] || die "DVSwitch control script is missing: $DVSWITCH_SH"
 getent passwd asl >/dev/null || die "Required ASL user 'asl' does not exist."
 getent passwd www-data >/dev/null || die "Required dashboard account 'www-data' does not exist."
@@ -73,8 +78,15 @@ rollback() {
         restore_file helper "$HELPER"
         restore_file unit "$UNIT_FILE"
         restore_file sudoers "$SUDOERS_FILE"
+        if (( FIREWALL_RULE_ADDED )); then
+            case "$FIREWALL_BACKEND" in
+                firewalld) firewall-cmd --zone="$FIREWALL_ZONE" --remove-port=3000/tcp >/dev/null 2>&1 || true; firewall-cmd --permanent --zone="$FIREWALL_ZONE" --remove-port=3000/tcp >/dev/null 2>&1 || true ;;
+                ufw) ufw --force delete allow 3000/tcp >/dev/null 2>&1 || true ;;
+            esac
+        fi
         if [[ -d "$BACKUP_ROOT/presets" ]]; then install -d -o root -g root -m 0755 "$PRESET_DIR"; cp -a "$BACKUP_ROOT/presets/." "$PRESET_DIR/" || true; elif [[ -e "$BACKUP_ROOT/presets.absent" ]]; then rm -rf -- "$PRESET_DIR"; fi
         [[ ! -e "$BACKUP_ROOT/live-MMDVM_Bridge.ini" ]] || cp -a "$BACKUP_ROOT/live-MMDVM_Bridge.ini" "$LIVE_INI"
+        [[ ! -e "$BACKUP_ROOT/live-Analog_Bridge.ini" ]] || cp -a "$BACKUP_ROOT/live-Analog_Bridge.ini" "$ANALOG_INI"
         if [[ -e "$BACKUP_ROOT/active-tg_alias.yml" && -d "$APP_DIR/configs" ]]; then install -o asl -g asl -m 0644 "$BACKUP_ROOT/active-tg_alias.yml" "$APP_DIR/configs/tg_alias.yml"; fi
         systemctl restart analog_bridge.service mmdvm_bridge.service >/dev/null 2>&1 || true
         systemctl daemon-reload >/dev/null 2>&1 || true
@@ -95,6 +107,14 @@ ini_get() {
         /^[[:space:]]*\[[^]]+\][[:space:]]*$/ { current=$0; gsub(/^[[:space:]]*\[|\][[:space:]]*$/, "", current); in_section=(current==wanted_section); next }
         in_section && index($0, "=") { name=substr($0,1,index($0,"=")-1); if (trim(name)==wanted_key) { value=substr($0,index($0,"=")+1); print trim(value); exit } }
     ' "$file"
+}
+
+ini_get_scalar() {
+    local value
+    value="$(ini_get "$1" "$2" "$3")"
+    value="${value%%[[:space:]];*}"
+    value="${value%%[[:space:]]#*}"
+    printf '%s\n' "$value" | tr -d '[:space:]'
 }
 
 classify_address() {
@@ -158,6 +178,37 @@ normalized_ini() {
 
 save_or_mark_absent() { local source="$1" backup_name="$2"; if [[ -e "$source" ]]; then cp -a "$source" "$BACKUP_ROOT/$backup_name"; else : >"$BACKUP_ROOT/$backup_name.absent"; fi; }
 
+ensure_firewall_port() {
+    if command -v firewall-cmd >/dev/null && firewall-cmd --state >/dev/null 2>&1; then
+        FIREWALL_BACKEND=firewalld
+        FIREWALL_ZONE="$(firewall-cmd --get-active-zones | awk '$1 != "interfaces:" && $1 != "sources:" { print $1; exit }')"
+        [[ -n "$FIREWALL_ZONE" ]] || FIREWALL_ZONE="$(firewall-cmd --get-default-zone)"
+        if firewall-cmd --permanent --zone="$FIREWALL_ZONE" --query-port=3000/tcp >/dev/null; then
+            firewall-cmd --zone="$FIREWALL_ZONE" --query-port=3000/tcp >/dev/null || firewall-cmd --zone="$FIREWALL_ZONE" --add-port=3000/tcp >/dev/null
+            printf '  Firewall: TCP port 3000 already allowed by firewalld (%s zone)\n' "$FIREWALL_ZONE"
+        else
+            firewall-cmd --permanent --zone="$FIREWALL_ZONE" --add-port=3000/tcp >/dev/null
+            firewall-cmd --zone="$FIREWALL_ZONE" --add-port=3000/tcp >/dev/null
+            FIREWALL_RULE_ADDED=1
+            printf '  Firewall: allowed TCP port 3000 through firewalld (%s zone)\n' "$FIREWALL_ZONE"
+        fi
+        firewall-cmd --permanent --zone="$FIREWALL_ZONE" --query-port=3000/tcp >/dev/null
+        firewall-cmd --zone="$FIREWALL_ZONE" --query-port=3000/tcp >/dev/null
+    elif command -v ufw >/dev/null && ufw status | head -n 1 | grep -q '^Status: active'; then
+        FIREWALL_BACKEND=ufw
+        if ufw status | grep -Eq '^3000/tcp[[:space:]]+ALLOW'; then
+            printf '  Firewall: TCP port 3000 already allowed by UFW\n'
+        else
+            ufw allow 3000/tcp comment 'DVSwitch Mode Switcher' >/dev/null
+            FIREWALL_RULE_ADDED=1
+            printf '  Firewall: allowed TCP port 3000 through UFW\n'
+        fi
+        ufw status | grep -Eq '^3000/tcp[[:space:]]+ALLOW'
+    else
+        printf '  Firewall: no active firewalld or UFW configuration detected; no rule required\n'
+    fi
+}
+
 CURRENT_ADDRESS="$(ini_get "$LIVE_INI" 'DMR Network' Address)"
 CURRENT_NETWORK="$(classify_address "$CURRENT_ADDRESS")"
 CURRENT_PASSWORD="$(ini_get "$LIVE_INI" 'DMR Network' Password)"
@@ -205,6 +256,33 @@ if [[ ! "$DMR_ID" =~ ^[0-9]{7}$ || "$DMR_ID" == 1234567 ]]; then
     write_value_file "$TMP_DIR/dmr-id" "$DMR_ID"; replace_ini_value "$BASE_INI" General Id "$TMP_DIR/dmr-id" "$TMP_DIR/base.next"; mv "$TMP_DIR/base.next" "$BASE_INI"
 fi
 
+ANALOG_GATEWAY_ID="$(ini_get_scalar "$ANALOG_INI" AMBE_AUDIO gatewayDmrId || true)"
+ANALOG_REPEATER_ID="$(ini_get_scalar "$ANALOG_INI" AMBE_AUDIO repeaterID || true)"
+if [[ "$ANALOG_REPEATER_ID" =~ ^[0-9]{9}$ ]]; then
+    ANALOG_SSID="${ANALOG_REPEATER_ID:7:2}"
+else
+    while true; do
+        ANALOG_SSID="$(prompt_with_default 'Two-digit Analog_Bridge SSID' 01)"
+        [[ "$ANALOG_SSID" =~ ^[0-9]{2}$ ]] && break
+        printf 'Enter a two-digit SSID from 00 through 99.\n' >/dev/tty
+    done
+fi
+EXPECTED_REPEATER_ID="${DMR_ID}${ANALOG_SSID}"
+ANALOG_UPDATE=0
+if [[ "$ANALOG_GATEWAY_ID" != "$DMR_ID" || "$ANALOG_REPEATER_ID" != "$EXPECTED_REPEATER_ID" ]]; then ANALOG_UPDATE=1; fi
+ANALOG_OWNER="$(stat -c %U "$ANALOG_INI")"
+ANALOG_GROUP="$(stat -c %G "$ANALOG_INI")"
+ANALOG_MODE="$(stat -c %a "$ANALOG_INI")"
+cp -a "$ANALOG_INI" "$TMP_DIR/Analog_Bridge.ini"
+if (( ANALOG_UPDATE )); then
+    write_value_file "$TMP_DIR/gateway-dmr-id" "$DMR_ID"
+    replace_ini_value "$TMP_DIR/Analog_Bridge.ini" AMBE_AUDIO gatewayDmrId "$TMP_DIR/gateway-dmr-id" "$TMP_DIR/Analog_Bridge.next"
+    mv "$TMP_DIR/Analog_Bridge.next" "$TMP_DIR/Analog_Bridge.ini"
+    write_value_file "$TMP_DIR/repeater-id" "$EXPECTED_REPEATER_ID"
+    replace_ini_value "$TMP_DIR/Analog_Bridge.ini" AMBE_AUDIO repeaterID "$TMP_DIR/repeater-id" "$TMP_DIR/Analog_Bridge.next"
+    mv "$TMP_DIR/Analog_Bridge.next" "$TMP_DIR/Analog_Bridge.ini"
+fi
+
 NXDN_ID="$(ini_get "$BASE_INI" NXDN Id || true)"
 if [[ ! "$NXDN_ID" =~ ^[0-9]{5}$ || "$NXDN_ID" == 12345 ]]; then
     read -rp 'Do you have a five-digit NXDN ID? [y/N]: ' HAVE_NXDN </dev/tty
@@ -217,6 +295,7 @@ fi
 printf '\nDVSwitch configuration discovery\n'
 printf '  Callsign: %s\n' "$CALLSIGN"
 printf '  DMR ID: %s\n' "$DMR_ID"
+printf '  Analog_Bridge repeater ID: %s (SSID %s)\n' "$EXPECTED_REPEATER_ID" "$ANALOG_SSID"
 printf '  NXDN ID: %s\n' "${NXDN_ID:-not configured}"
 printf '  Current DMR network: %s\n' "$CURRENT_NETWORK"
 printf '  BrandMeister credential: %s\n' "$([[ -n "$BM_PASSWORD" ]] && printf found || printf required)"
@@ -242,6 +321,7 @@ printf '  Install type: %s\n' "$INSTALL_MODE"
 [[ -z "$EXISTING_FAVORITES_NETWORK" ]] || printf '  Existing DMR favorites: assigned to %s\n' "$EXISTING_FAVORITES_NETWORK"
 printf '  Production directory/port: %s / 3000\n' "$APP_DIR"
 printf '  BrandMeister master: %s\n' "$BM_ADDRESS"
+printf '  Analog_Bridge IDs: %s\n' "$([[ $ANALOG_UPDATE -eq 1 ]] && printf 'will be synchronized' || printf 'already synchronized')"
 printf '  Initial network: %s\n' "$INITIAL_NETWORK"
 read -rp 'Continue with installation? [y/N]: ' CONFIRM </dev/tty
 [[ "$CONFIRM" =~ ^[Yy]$ ]] || die "Installation cancelled."
@@ -308,6 +388,7 @@ log "Backing up the current production installation"
 install -d -o root -g root -m 0700 "$BACKUP_ROOT"
 save_or_mark_absent "$HELPER" helper; save_or_mark_absent "$UNIT_FILE" unit; save_or_mark_absent "$SUDOERS_FILE" sudoers
 cp -a "$LIVE_INI" "$BACKUP_ROOT/live-MMDVM_Bridge.ini"
+cp -a "$ANALOG_INI" "$BACKUP_ROOT/live-Analog_Bridge.ini"
 [[ ! -f "$APP_DIR/configs/tg_alias.yml" ]] || cp -a "$APP_DIR/configs/tg_alias.yml" "$BACKUP_ROOT/active-tg_alias.yml"
 if [[ -d "$PRESET_DIR" ]]; then cp -a "$PRESET_DIR" "$BACKUP_ROOT/presets"; else : >"$BACKUP_ROOT/presets.absent"; fi
 systemctl stop "$SERVICE" >/dev/null 2>&1 || true
@@ -315,6 +396,7 @@ if [[ -e "$APP_DIR" ]]; then OLD_APP="${APP_DIR}.before-${INSTALL_MODE}-$STAMP";
 mv "$STAGE" "$APP_DIR"; STAGE=; SWAPPED=1
 
 log "Installing protected presets and restricted system integration"
+if (( ANALOG_UPDATE )); then install -o "$ANALOG_OWNER" -g "$ANALOG_GROUP" -m "$ANALOG_MODE" "$TMP_DIR/Analog_Bridge.ini" "$ANALOG_INI"; fi
 install -d -o root -g root -m 0755 "$PRESET_DIR"
 install -o root -g root -m 0600 "$TMP_DIR/MMDVM_Bridge.BM.ini" "$PRESET_DIR/MMDVM_Bridge.BM.ini"
 install -o root -g root -m 0600 "$TMP_DIR/MMDVM_Bridge.TGIF.ini" "$PRESET_DIR/MMDVM_Bridge.TGIF.ini"
@@ -328,9 +410,14 @@ systemctl daemon-reload; systemctl reset-failed "$SERVICE" >/dev/null 2>&1 || tr
 
 log "Activating $INITIAL_NETWORK and matching favorites"
 "$HELPER" "$INITIAL_NETWORK"
+[[ "$(ini_get_scalar "$ANALOG_INI" AMBE_AUDIO gatewayDmrId)" == "$DMR_ID" ]]
+[[ "$(ini_get_scalar "$ANALOG_INI" AMBE_AUDIO repeaterID)" == "$EXPECTED_REPEATER_ID" ]]
 [[ "$(stat -c '%U:%G:%a' "$LIVE_INI")" == root:www-data:640 ]]
 runuser -u www-data -- test -r "$LIVE_INI"
 systemctl enable --now "$SERVICE"; sleep 3
+
+log "Checking firewall access for production TCP port 3000"
+ensure_firewall_port
 
 log "Verifying the production installation"
 systemctl is-active --quiet "$SERVICE"; systemctl is-active --quiet analog_bridge.service; systemctl is-active --quiet mmdvm_bridge.service

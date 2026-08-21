@@ -21,6 +21,8 @@ tests
 !tests/
 !tests/test-merge-favorites.js
 !tests/test-helper-permissions.js
+!tests/test-id-consistency.js
+!tests/test-firewall.js
 
 bin/
 bin/*

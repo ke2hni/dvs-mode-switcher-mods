@@ -2,6 +2,22 @@
 
 All notable public releases of this DVSwitch Mode Switcher fork are recorded here.
 
+## 1.1.0-rc6 - 2026-08-20
+
+- Automatically detect active firewalld or UFW host-firewall management.
+- Preserve an existing TCP port 3000 allowance or add and verify it when missing.
+- Select the active firewalld zone and configure both its runtime and permanent rules.
+- Remove only a firewall rule added by the current installation if installation rolls back.
+- Added a firewall-management regression test.
+
+## 1.1.0-rc5 - 2026-08-20
+
+- Synchronize Analog_Bridge `gatewayDmrId` with the validated seven-digit DMR ID.
+- Build Analog_Bridge `repeaterID` from the seven-digit DMR ID plus its existing two-digit SSID.
+- Ask for a two-digit SSID only when it cannot be discovered from a valid existing repeater ID.
+- Back up, verify and roll back `Analog_Bridge.ini` with the other installation files.
+- Added a DMR ID consistency regression test.
+
 ## 1.1.0-rc4 - 2026-08-20
 
 - Simplified first-install, update and clean-reinstall instructions to one copy-and-paste command each.

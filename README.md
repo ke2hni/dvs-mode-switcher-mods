@@ -40,15 +40,20 @@ All three modes require an existing working DVSwitch installation. “First” m
 The installer will:
 
 1. Confirm that DVSwitch is already installed and configured.
-2. Read the existing callsign, DMR ID, NXDN ID and DMR network information from `MMDVM_Bridge.ini`.
-3. Ask only for information that is missing or still uses a placeholder.
+2. Read the existing callsign, DMR ID, NXDN ID and DMR network information from `MMDVM_Bridge.ini` and the DMR ID/SSID information from `Analog_Bridge.ini`.
+3. Ask only for information that is missing, invalid or still uses a placeholder.
 4. Request any unavailable BM or TGIF network password using hidden input.
 5. Ask which DMR network should be active initially.
 6. Display a password-free installation summary and request confirmation.
 7. Detect a clean, first-install or upgrade operation and back up existing files.
 8. Install the enhanced application and restricted system integration.
 9. Generate protected BM and TGIF presets from the existing working MMDVM configuration.
-10. Activate the selected network and verify the web interface, favorites and bridge services.
+10. Activate the selected network and start the production service.
+11. Preserve or add the TCP port 3000 firewall allowance when firewalld or UFW is active, then verify the web interface, favorites and bridge services.
+
+The base DMR/CCS7 ID is always seven digits. Analog_Bridge uses that same value for `gatewayDmrId` and uses the seven-digit ID plus a two-digit SSID for its nine-digit `repeaterID`. The installer preserves a valid existing SSID and synchronizes these fields when the base ID must be corrected.
+
+When firewalld or UFW is active, the installer checks TCP port 3000 automatically. An existing allowance is preserved; a missing allowance is added and verified. No firewall knowledge or separate firewall command is required from the user.
 
 When prompted for passwords, enter the network connection credentials—not the website login passwords:
 
