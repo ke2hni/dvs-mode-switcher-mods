@@ -12,6 +12,7 @@ All notable public releases of this DVS Mode Switcher fork are recorded here.
 - Automatically preserves or opens TCP port 3000 with active firewalld or UFW configurations.
 - Validated on Raspberry Pi 5, ARM64 and Debian 13 through first, manual-upgrade, clean, reboot, firewall, restore, repeated-restore and controlled-failure testing.
 - Completed final product-branding, dynamic-version-display, documentation and release-regression audits.
+- Documented `--restore` alongside First, Upgrade and Clean in the Installation modes reference.
 
 ## 1.1.0-rc11 - 2026-08-21
 
