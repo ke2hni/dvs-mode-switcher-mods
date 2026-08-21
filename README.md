@@ -270,3 +270,8 @@ Network switching also creates timestamped backups of the live MMDVM INI and act
 Based on the original **DVS Mode Switcher** by Caleb (KO4UYJ).
 
 Licensed under **LGPL-3.0-only**. See [LICENSE](LICENSE).
+
+<img width="1600" height="852" alt="Screenshot 2026-08-20 234650" src="https://github.com/user-attachments/assets/408c2c91-ad78-4550-b9f4-49434fe4bd5e" />
+<img width="1600" height="852" alt="Screenshot 2026-08-20 234722" src="https://github.com/user-attachments/assets/8d9ce569-0422-40d0-b935-565937eb0f7f" />
+<img width="1600" height="852" alt="Screenshot 2026-08-20 234731" src="https://github.com/user-attachments/assets/79b46496-dd73-4d06-a4cf-4af627eef8ca" />
+<img width="1600" height="852" alt="Screenshot 2026-08-20 234745" src="https://github.com/user-attachments/assets/0e933fd3-9521-41c7-b910-df2ac9ede55f" />
