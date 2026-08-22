@@ -13,16 +13,16 @@ const server = fs.readFileSync(path.join(root, 'modules/Server.js'), 'utf8');
 const indexView = fs.readFileSync(path.join(root, 'views/index.ejs'), 'utf8');
 const installer = fs.readFileSync(path.join(root, 'install-dvs-mode-switcher.sh'), 'utf8');
 
-assert.strictEqual(packageJson.version, '1.1.0');
-assert.strictEqual(packageLock.version, '1.1.0');
-assert.strictEqual(packageLock.packages[''].version, '1.1.0');
-assert.match(readme, /version-1\.1\.0-2563eb/);
-assert.doesNotMatch(readme.split('## 1.1.0')[0], /1\.1\.0-rc/i);
+assert.strictEqual(packageJson.version, '1.1.1');
+assert.strictEqual(packageLock.version, '1.1.1');
+assert.strictEqual(packageLock.packages[''].version, '1.1.1');
+assert.match(readme, /version-1\.1\.1-2563eb/);
+assert.doesNotMatch(readme.split('## 1.1.1')[0], /1\.1\.1-rc/i);
 assert.match(server, /this\.app\.locals\.productName = 'DVS Mode Switcher'/);
 assert.match(server, /this\.app\.locals\.appVersion = packageInfo\.version/);
 assert.match(indexView, /<title><%= productName %> v<%= appVersion %><\/title>/);
-const renderedIndex = ejs.render(indexView, { productName: 'DVS Mode Switcher', appVersion: '1.1.0', modes: [], usrpEnabled: false }, { filename: path.join(root, 'views/index.ejs') });
-assert.match(renderedIndex, /<title>DVS Mode Switcher v1\.1\.0<\/title>/);
+const renderedIndex = ejs.render(indexView, { productName: 'DVS Mode Switcher', appVersion: '1.1.1', modes: [], usrpEnabled: false }, { filename: path.join(root, 'views/index.ejs') });
+assert.match(renderedIndex, /<title>DVS Mode Switcher v1\.1\.1<\/title>/);
 assert.doesNotMatch(renderedIndex, /-rc[0-9]+/i);
 
 for (const serviceFile of ['installer/dvswitch_mode_switcher.service']) {

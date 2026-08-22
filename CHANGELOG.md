@@ -2,6 +2,13 @@
 
 All notable public releases of this DVS Mode Switcher fork are recorded here.
 
+## 1.1.1 - 2026-08-21
+
+- Updated Express from 4.19.2 to 4.22.2, Socket.IO from 4.7.5 to 4.8.3, YAML from 2.4.5 to 2.9.0 and Yargs from 17.7.2 to 17.7.3.
+- Regenerated the npm lockfile so patched compatible transitive dependencies are selected without forced major-version upgrades or dependency overrides.
+- Reduced the production dependency audit from 18 known vulnerabilities to zero while retaining EJS 3.1.10 and the existing application behavior.
+- Retains the Node.js 20 and Debian 13 compatibility target and passes all seven source regression tests.
+
 ## 1.1.0 - 2026-08-21
 
 - Corrected the public installer filename to `install-dvs-mode-switcher.sh` so it matches the DVS Mode Switcher product name.
