@@ -4,7 +4,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
-const installer = fs.readFileSync(path.resolve(__dirname, '../install-dvswitch-mode-switcher.sh'), 'utf8');
+const installer = fs.readFileSync(path.resolve(__dirname, '../install-dvs-mode-switcher.sh'), 'utf8');
 const restore = fs.readFileSync(path.resolve(__dirname, '../installer/restore-backup'), 'utf8');
 
 assert.match(installer, /--restore \[install-TIMESTAMP\]/);

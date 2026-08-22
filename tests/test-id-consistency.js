@@ -4,7 +4,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
-const installer = fs.readFileSync(path.resolve(__dirname, '../install-dvswitch-mode-switcher.sh'), 'utf8');
+const installer = fs.readFileSync(path.resolve(__dirname, '../install-dvs-mode-switcher.sh'), 'utf8');
 
 assert.match(installer, /ANALOG_INI=\/opt\/Analog_Bridge\/Analog_Bridge\.ini/);
 assert.match(installer, /EXPECTED_REPEATER_ID="\$\{DMR_ID\}\$\{ANALOG_SSID\}"/);

@@ -4,7 +4,7 @@ const assert = require('assert');
 const fs = require('fs');
 const path = require('path');
 
-const installer = fs.readFileSync(path.resolve(__dirname, '../install-dvswitch-mode-switcher.sh'), 'utf8');
+const installer = fs.readFileSync(path.resolve(__dirname, '../install-dvs-mode-switcher.sh'), 'utf8');
 
 assert.match(installer, /BACKUP_ROOT="\/var\/backups\/dvswitch-mode-switcher\/install-\$STAMP"/);
 assert.match(installer, /install -d -o root -g root -m 0700 "\$BACKUP_ROOT"/);

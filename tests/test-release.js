@@ -11,6 +11,7 @@ const packageLock = JSON.parse(fs.readFileSync(path.join(root, 'package-lock.jso
 const readme = fs.readFileSync(path.join(root, 'README.md'), 'utf8');
 const server = fs.readFileSync(path.join(root, 'modules/Server.js'), 'utf8');
 const indexView = fs.readFileSync(path.join(root, 'views/index.ejs'), 'utf8');
+const installer = fs.readFileSync(path.join(root, 'install-dvs-mode-switcher.sh'), 'utf8');
 
 assert.strictEqual(packageJson.version, '1.1.0');
 assert.strictEqual(packageLock.version, '1.1.0');
@@ -24,7 +25,7 @@ const renderedIndex = ejs.render(indexView, { productName: 'DVS Mode Switcher', 
 assert.match(renderedIndex, /<title>DVS Mode Switcher v1\.1\.0<\/title>/);
 assert.doesNotMatch(renderedIndex, /-rc[0-9]+/i);
 
-for (const serviceFile of ['installer/dvswitch_mode_switcher.service', 'debian/dvswitch_mode_switcher.service']) {
+for (const serviceFile of ['installer/dvswitch_mode_switcher.service']) {
   const service = fs.readFileSync(path.join(root, serviceFile), 'utf8');
   assert.match(service, /^Description=DVS Mode Switcher web interface$/m);
   assert.match(service, /^User=asl$/m);
@@ -43,7 +44,22 @@ const brandingFiles = [
   'public/js/edit.js',
   'public/js/index.js',
   'configs/config.example.yml',
+  'installer/dvswitch_mode_switcher.service',
+  'install-dvs-mode-switcher.sh',
   'views/index.ejs'
 ];
+
+for (const filename of brandingFiles) {
+  const contents = fs.readFileSync(path.join(root, filename), 'utf8');
+  assert.doesNotMatch(contents, /DVSwitch Mode Switcher/);
+}
+
+assert.ok(fs.existsSync(path.join(root, 'install-dvs-mode-switcher.sh')));
+assert.ok(!fs.existsSync(path.join(root, 'install-dvswitch-mode-switcher.sh')));
+assert.match(installer, /Removing installation-only files from the production application/);
+assert.match(installer, /rm -rf -- "\$APP_DIR\/\.git" "\$APP_DIR\/tests" "\$APP_DIR\/installer" "\$APP_DIR\/presets"/);
+assert.match(installer, /rm -f --[^\n]*"\$APP_DIR\/install-dvs-mode-switcher\.sh"/);
+assert.match(installer, /"\$OLD_APP" == \/opt\/dvswitch_mode_switcher\.before-\*/);
+assert.doesNotMatch(installer, /\.failed-\$STAMP/);
 
 process.stdout.write('Stable-release housekeeping regression test passed.\n');

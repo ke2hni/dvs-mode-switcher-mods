@@ -4,9 +4,6 @@ configs/*
 # Config
 !configs/config.example.yml
 
-# Alias
-
-
 .idea
 .idea/*
 .idea/**

@@ -4,6 +4,10 @@ All notable public releases of this DVS Mode Switcher fork are recorded here.
 
 ## 1.1.0 - 2026-08-21
 
+- Corrected the public installer filename to `install-dvs-mode-switcher.sh` so it matches the DVS Mode Switcher product name.
+- Removed repository, test, installer-source and documentation files from the production application after successful verification while retaining the license and runtime files.
+- Removed redundant pre-upgrade application directories after a successful installation and discarded failed staged applications after rollback.
+- Restored release-test coverage for product branding and deleted-file references.
 - Promoted the fully validated RC11 codebase to the stable 1.1.0 release.
 - Supports first installation, safe upgrade, clean reinstall and permanent-snapshot restore workflows.
 - Adds TGIF and BrandMeister runtime switching with matched network-specific favorites and protected credentials.

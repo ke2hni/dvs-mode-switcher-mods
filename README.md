@@ -55,7 +55,7 @@
 Log into the DVSwitch server and copy/paste this single command:
 
 ```bash
-cd /home/asl && git clone https://github.com/ke2hni/dvs-mode-switcher-mods.git && cd dvs-mode-switcher-mods && sudo ./install-dvswitch-mode-switcher.sh
+cd /home/asl && git clone https://github.com/ke2hni/dvs-mode-switcher-mods.git && cd dvs-mode-switcher-mods && sudo ./install-dvs-mode-switcher.sh
 ```
 
 The installer detects a first installation and guides the user through the required information. Password entries are hidden.
@@ -79,7 +79,7 @@ The installer detects a first installation and guides the user through the requi
 Run this single command:
 
 ```bash
-cd /home/asl/dvs-mode-switcher-mods && git pull --ff-only && sudo ./install-dvswitch-mode-switcher.sh
+cd /home/asl/dvs-mode-switcher-mods && git pull --ff-only && sudo ./install-dvs-mode-switcher.sh
 ```
 
 An upgrade preserves the production configuration, available credentials and favorites. The installer asks whether the active DMR favorites belong to `bm` or `tgif`, assigns that DMR list to the selected network, and copies existing non-DMR favorites to both network presets.
@@ -91,7 +91,7 @@ An upgrade preserves the production configuration, available credentials and fav
 Run this only when previous DVS Mode Switcher settings and favorites should be replaced with freshly generated network presets and repository defaults:
 
 ```bash
-cd /home/asl/dvs-mode-switcher-mods && git pull --ff-only && sudo ./install-dvswitch-mode-switcher.sh --clean
+cd /home/asl/dvs-mode-switcher-mods && git pull --ff-only && sudo ./install-dvs-mode-switcher.sh --clean
 ```
 
 > [!WARNING]
@@ -261,13 +261,13 @@ Network switching also creates timestamped backups of the live MMDVM INI and act
 Interactively list and select an installation snapshot:
 
 ```bash
-cd /home/asl/dvs-mode-switcher-mods && sudo ./install-dvswitch-mode-switcher.sh --restore
+cd /home/asl/dvs-mode-switcher-mods && sudo ./install-dvs-mode-switcher.sh --restore
 ```
 
 Or restore a specific snapshot by its directory name:
 
 ```bash
-cd /home/asl/dvs-mode-switcher-mods && sudo ./install-dvswitch-mode-switcher.sh --restore install-YYYYMMDD-HHMMSS
+cd /home/asl/dvs-mode-switcher-mods && sudo ./install-dvs-mode-switcher.sh --restore install-YYYYMMDD-HHMMSS
 ```
 
 Before changing the working installation, restore creates and retains a root-only `restore-safety-YYYYMMDD-HHMMSS` snapshot. It then restores the application or prior absence state, live INIs, favorites, protected presets, helper, systemd unit, sudo policy, service enabled/running state and recorded firewall state. If verification fails, it automatically attempts to recover the pre-restore working state from the safety snapshot.
