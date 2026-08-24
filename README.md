@@ -306,7 +306,7 @@ RC8 backups remain restorable. Because RC8 manifests did not record firewall sta
 
 ## 📜 Credits and license
 
-Based on the original **DVS Mode Switcher** by Caleb (KO4UYJ).
+Based on the original [DVS Mode Switcher](https://github.com/firealarmss/dvswitch_mode_switcher) by Caleb (KO4UYJ). This repository contains modifications maintained by KE2HNI.
 
 Maintained by **KE2HNI**.
 
