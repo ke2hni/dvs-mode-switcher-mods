@@ -52,7 +52,7 @@
 
 ## 🚀 First installation
 
-Log into the DVSwitch server and copy/paste this single command:
+Log into a terminal session and copy/paste this single command:
 
 ```bash
 cd /home/asl && git clone https://github.com/ke2hni/dvs-mode-switcher-mods.git && cd dvs-mode-switcher-mods && sudo ./install-dvs-mode-switcher.sh
