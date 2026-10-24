@@ -97,6 +97,22 @@ cd /home/asl/dvs-mode-switcher-mods && git pull --ff-only && sudo ./install-dvs-
 > [!WARNING]
 > `--clean` ignores previous DVS Mode Switcher settings, protected presets and customized favorites. It still reads the live DVSwitch configuration and does not reinstall DVSwitch itself.
 
+## 🗑️ Uninstall
+
+Review the planned actions without changing the system:
+
+```bash
+cd /home/asl/dvs-mode-switcher-mods && sudo ./uninstall-dvs-mode-switcher.sh --check
+```
+
+Run the uninstaller interactively:
+
+```bash
+cd /home/asl/dvs-mode-switcher-mods && sudo ./uninstall-dvs-mode-switcher.sh
+```
+
+The uninstaller removes the Mode Switcher application, systemd unit, restricted DMR helper, sudo policy and protected network presets. If a valid installer snapshot exists, it restores the pre-install application state, live MMDVM and Analog_Bridge configuration, favorites, presets, service state and recorded TCP 3000 firewall state. Backups are retained. Without an installer snapshot, live bridge configuration and firewall rules are preserved. DVSwitch and shared system packages such as Node.js, npm and Git are not removed.
+
 ---
 
 ## 🧭 Installation modes
