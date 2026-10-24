@@ -111,7 +111,7 @@ Run the uninstaller interactively:
 cd /home/asl/dvs-mode-switcher-mods && sudo ./uninstall-dvs-mode-switcher.sh
 ```
 
-The uninstaller removes the Mode Switcher application, systemd unit, restricted DMR helper, sudo policy and protected network presets. If a valid installer snapshot exists, it restores the pre-install application state, live MMDVM and Analog_Bridge configuration, favorites, presets, service state and recorded TCP 3000 firewall state. Backups are retained. Without an installer snapshot, live bridge configuration and firewall rules are preserved. DVSwitch and shared system packages such as Node.js, npm and Git are not removed.
+The uninstaller removes the Mode Switcher application, systemd unit, restricted DMR helper, sudo policy and its four protected presets. If a valid installer snapshot exists, it restores the pre-install MMDVM and Analog_Bridge configuration where those DVSwitch directories still exist, and restores the recorded TCP 3000 firewall state when the same firewall backend is active. It leaves the Mode Switcher application and service removed. Backups are retained. Without an installer snapshot, live bridge configuration and firewall rules are preserved. DVSwitch and shared system packages such as Node.js, npm and Git are not removed.
 
 ---
 

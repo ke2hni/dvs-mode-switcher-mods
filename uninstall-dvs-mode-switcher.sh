@@ -70,8 +70,7 @@ fi
 printf 'DVS Mode Switcher uninstaller\n'
 if [[ -n $SNAPSHOT ]]; then
     printf '  Restore point: %s\n' "${SNAPSHOT##*/}"
-    printf '  Previous application: %s\n' "$(manifest_value "$SNAPSHOT/manifest" application)"
-    printf '  Previous service: %s / %s\n' "$(manifest_value "$SNAPSHOT/manifest" service_active)" "$(manifest_value "$SNAPSHOT/manifest" service_enabled)"
+    printf '  Use snapshot for pre-install DVSwitch configuration and firewall state\n'
 else
     printf '  Restore point: none; live bridge configuration and firewall rules will be preserved\n'
 fi
@@ -79,9 +78,10 @@ printf '  Remove application: %s\n' "$APP_DIR"
 printf '  Remove service: %s\n' "$UNIT_FILE"
 printf '  Remove helper and sudo policy: %s, %s\n' "$HELPER" "$SUDOERS_FILE"
 if [[ -n $SNAPSHOT ]]; then
-    printf '  Restore live bridge configurations, prior favorites, protected presets and recorded TCP 3000 state\n'
+    printf '  Restore live bridge configuration where DVSwitch directories exist\n'
+    printf '  Remove the four Mode Switcher presets from %s\n' "$PRESET_DIR"
 else
-    printf '  Remove protected presets: %s\n' "$PRESET_DIR"
+    printf '  Remove the four Mode Switcher presets from %s\n' "$PRESET_DIR"
 fi
 printf '  Keep installation and switch backups: %s\n' "$BACKUP_BASE"
 printf '  Keep DVSwitch, Node.js, npm, Git and shared system dependencies\n'
@@ -106,58 +106,40 @@ rm -rf -- "$APP_DIR"
 rm -f -- "$HELPER" "$UNIT_FILE" "$SUDOERS_FILE"
 
 if [[ -n $SNAPSHOT ]]; then
-    log "Restoring files and service state from ${SNAPSHOT##*/}"
-    restore_item() {
-        local name=$1 destination=$2
-        if [[ -e "$SNAPSHOT/$name" ]]; then
-            rm -rf -- "$destination"
-            cp -a -- "$SNAPSHOT/$name" "$destination"
-        elif [[ -e "$SNAPSHOT/$name.absent" ]]; then
-            rm -rf -- "$destination"
-        else
-            die "Snapshot is incomplete: missing $name"
-        fi
-    }
-    restore_item application "$APP_DIR"
-    restore_item helper "$HELPER"
-    restore_item unit "$UNIT_FILE"
-    restore_item sudoers "$SUDOERS_FILE"
-    cp -a -- "$SNAPSHOT/live-MMDVM_Bridge.ini" "$LIVE_INI"
-    cp -a -- "$SNAPSHOT/live-Analog_Bridge.ini" "$ANALOG_INI"
-    if [[ -e "$SNAPSHOT/presets" ]]; then
-        rm -rf -- "$PRESET_DIR"
-        install -d -o root -g root -m 0755 "$PRESET_DIR"
-        cp -a -- "$SNAPSHOT/presets/." "$PRESET_DIR/"
-    elif [[ -e "$SNAPSHOT/presets.absent" ]]; then
-        rm -rf -- "$PRESET_DIR"
-        rmdir -- "$CONFIG_DIR" 2>/dev/null || true
+    log "Restoring pre-install DVSwitch configuration where directories remain"
+    if [[ -d "${LIVE_INI%/*}" ]]; then
+        cp -a -- "$SNAPSHOT/live-MMDVM_Bridge.ini" "$LIVE_INI"
+    else
+        printf '  Skipped MMDVM_Bridge.ini restore because %s is missing\n' "${LIVE_INI%/*}"
     fi
-    if [[ -d "$APP_DIR/configs" ]]; then
-        if [[ -f "$SNAPSHOT/active-tg_alias.yml" ]]; then
-            install -o asl -g asl -m 0644 "$SNAPSHOT/active-tg_alias.yml" "$APP_DIR/configs/tg_alias.yml"
-        elif [[ -e "$SNAPSHOT/active-tg_alias.yml.absent" ]]; then
-            rm -f -- "$APP_DIR/configs/tg_alias.yml"
-        fi
+    if [[ -d "${ANALOG_INI%/*}" ]]; then
+        cp -a -- "$SNAPSHOT/live-Analog_Bridge.ini" "$ANALOG_INI"
+    else
+        printf '  Skipped Analog_Bridge.ini restore because %s is missing\n' "${ANALOG_INI%/*}"
     fi
 else
     log "Removing Mode Switcher presets"
-    rm -rf -- "$PRESET_DIR"
-    rmdir -- "$CONFIG_DIR" 2>/dev/null || true
 fi
+
+rm -f -- "$PRESET_DIR/MMDVM_Bridge.BM.ini" "$PRESET_DIR/MMDVM_Bridge.TGIF.ini" "$PRESET_DIR/tg_alias.BM.yml" "$PRESET_DIR/tg_alias.TGIF.yml"
+rmdir -- "$PRESET_DIR" 2>/dev/null || true
+rmdir -- "$CONFIG_DIR" 2>/dev/null || true
 
 log "Restoring recorded firewall state when available"
 case "$FW_BACKEND" in
     firewalld)
-        if command -v firewall-cmd >/dev/null && firewall-cmd --state >/dev/null 2>&1; then
+        if command -v firewall-cmd >/dev/null && firewall-cmd --state >/dev/null 2>&1 && [[ -n $SNAPSHOT ]]; then
             [[ -n $FW_ZONE ]] || FW_ZONE=$(firewall-cmd --get-default-zone)
-            if [[ $(manifest_value "$SNAPSHOT/manifest" firewall_runtime_3000) == yes ]]; then firewall-cmd --zone="$FW_ZONE" --add-port=3000/tcp >/dev/null; else firewall-cmd --zone="$FW_ZONE" --remove-port=3000/tcp >/dev/null 2>&1 || true; fi
-            if [[ $(manifest_value "$SNAPSHOT/manifest" firewall_permanent_3000) == yes ]]; then firewall-cmd --permanent --zone="$FW_ZONE" --add-port=3000/tcp >/dev/null; else firewall-cmd --permanent --zone="$FW_ZONE" --remove-port=3000/tcp >/dev/null 2>&1 || true; fi
+            if [[ $(manifest_value "$SNAPSHOT/manifest" firewall_backend) == firewalld ]]; then
+                if [[ $(manifest_value "$SNAPSHOT/manifest" firewall_runtime_3000) == yes ]]; then firewall-cmd --zone="$FW_ZONE" --add-port=3000/tcp >/dev/null; else firewall-cmd --zone="$FW_ZONE" --remove-port=3000/tcp >/dev/null 2>&1 || true; fi
+                if [[ $(manifest_value "$SNAPSHOT/manifest" firewall_permanent_3000) == yes ]]; then firewall-cmd --permanent --zone="$FW_ZONE" --add-port=3000/tcp >/dev/null; else firewall-cmd --permanent --zone="$FW_ZONE" --remove-port=3000/tcp >/dev/null 2>&1 || true; fi
+            fi
         fi
         ;;
     ufw)
-        if command -v ufw >/dev/null && [[ $(manifest_value "$SNAPSHOT/manifest" firewall_permanent_3000) == yes ]]; then
+        if [[ -n $SNAPSHOT ]] && command -v ufw >/dev/null && ufw status | head -n 1 | grep -q '^Status: active' && [[ $(manifest_value "$SNAPSHOT/manifest" firewall_backend) == ufw ]] && [[ $(manifest_value "$SNAPSHOT/manifest" firewall_permanent_3000) == yes ]]; then
             ufw status | grep -Eq '^3000/tcp[[:space:]]+ALLOW' || ufw allow 3000/tcp >/dev/null
-        elif command -v ufw >/dev/null && ufw status | grep -Eq '^3000/tcp[[:space:]]+ALLOW'; then
+        elif [[ -n $SNAPSHOT ]] && command -v ufw >/dev/null && ufw status | head -n 1 | grep -q '^Status: active' && [[ $(manifest_value "$SNAPSHOT/manifest" firewall_backend) == ufw ]] && ufw status | grep -Eq '^3000/tcp[[:space:]]+ALLOW'; then
             ufw --force delete allow 3000/tcp >/dev/null 2>&1 || true
         fi
         ;;
@@ -168,22 +150,9 @@ esac
 systemctl daemon-reload
 systemctl reset-failed "$SERVICE" >/dev/null 2>&1 || true
 
-if [[ -n $SNAPSHOT ]]; then
-    systemctl restart analog_bridge.service mmdvm_bridge.service >/dev/null 2>&1 || true
-    case "$(manifest_value "$SNAPSHOT/manifest" service_enabled)" in
-        enabled) systemctl enable "$SERVICE" >/dev/null 2>&1 || true ;;
-        *) systemctl disable "$SERVICE" >/dev/null 2>&1 || true ;;
-    esac
-    if [[ $(manifest_value "$SNAPSHOT/manifest" service_active) == active ]]; then
-        systemctl start "$SERVICE" >/dev/null 2>&1 || true
-    else
-        systemctl stop "$SERVICE" >/dev/null 2>&1 || true
-    fi
-fi
-
 printf '\nUninstall complete.\n'
 if [[ -n $SNAPSHOT ]]; then
-    printf '  Restored pre-install state from: %s\n' "$SNAPSHOT"
+    printf '  Used snapshot for applicable restoration: %s\n' "$SNAPSHOT"
     printf '  Retained backups: %s\n' "$BACKUP_BASE"
 else
     printf '  No installation snapshot was available. Live MMDVM/Analog_Bridge files and firewall rules were preserved.\n'
